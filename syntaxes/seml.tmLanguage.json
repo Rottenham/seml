@@ -1,0 +1,35 @@
+{
+    "name": "seml",
+    "patterns": [
+        {
+            "name": "comment.seml",
+            "match": "#.*$"
+        },
+        {
+            "name": "",
+            "match": "^(C|P|B|D|PP|DD|c|p|b|d|pp|dd)\\s+(\\+?\\d+)?",
+            "captures": {
+                "1": {
+                    "name": "entity.other.attribute-name.seml"
+                },
+                "2": {
+                    "name": "constant.numeric.seml"
+                }
+            }
+        },
+        {
+            "name": "keyword.seml",
+            "match": "^(w|W)[1-9][\\s0-9]*(?=$|#)"
+        },
+        {
+            "name": "keyword.seml",
+            "match": ":"
+        },
+        {
+            "name": "entity.other.attribute-name.seml",
+            "match": "\\b([a-zA-Z_]+)(?=:)"
+        }
+    ],
+    "repository": {},
+    "scopeName": "source.seml"
+}
