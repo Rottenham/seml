@@ -161,8 +161,7 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		let cur = 0;
-		while (cur < rowsToken.length) {
+		for (let cur = 0; cur < rowsToken.length; cur++) {
 			const rowToken = rowsToken[cur]!;
 
 			const row = strictParseInt(rowToken);

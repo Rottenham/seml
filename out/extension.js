@@ -107,8 +107,7 @@ function activate(context) {
             error(lineNum, `请提供 ${expectedNum} 个${description}`, rowsToken);
             return;
         }
-        let cur = 0;
-        while (cur < rowsToken.length) {
+        for (let cur = 0; cur < rowsToken.length; cur++) {
             const rowToken = rowsToken[cur];
             const row = strictParseInt(rowToken);
             if (isNaN(row) || row < 1 || row > 6) {
