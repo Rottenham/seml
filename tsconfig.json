@@ -9,10 +9,13 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,
+		"alwaysStrict": true,
 		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"noImplicitAny": true,
 		"noFallthroughCasesInSwitch": true,
 		"noUnusedParameters": true,
-		"strictNullChecks": true,
 		"noUncheckedIndexedAccess": true,
+		"useUnknownInCatchVariables": true,
 	}
 }

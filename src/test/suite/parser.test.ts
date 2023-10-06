@@ -3,11 +3,11 @@ import { ParserOutput, error, parseCob, parseWave, parseFodder, parse } from '..
 import { expect } from 'chai';
 
 describe("parseCob", () => {
-    let out: ParserOutput = {};
+    let out: ParserOutput;
     const lineNum = 1;
 
     beforeEach(() => {
-        out = {};
+        out = { metadata: {} };
     });
 
     it("should return an error if no wave is set", () => {
@@ -129,8 +129,10 @@ describe("parseCob", () => {
             {
                 op: "Cob",
                 time: 300,
-                row: 2,
-                col: 9,
+                positions: [{
+                    row: 2,
+                    col: 9,
+                }]
             },
         ]);
     });
@@ -146,14 +148,18 @@ describe("parseCob", () => {
             {
                 op: "Cob",
                 time: 300,
-                row: 2,
-                col: 9,
+                positions: [{
+                    row: 2,
+                    col: 9,
+                }]
             },
             {
                 op: "Cob",
                 time: 300 + 134,
-                row: 2,
-                col: 9,
+                positions: [{
+                    row: 2,
+                    col: 9,
+                }]
             },
         ]);
     });
@@ -168,35 +174,32 @@ describe("parseCob", () => {
             {
                 op: "Cob",
                 time: 300,
-                row: 2,
-                col: 9,
-            },
-            {
-                op: "Cob",
-                time: 300,
-                row: 5,
-                col: 9,
+                positions: [{
+                    row: 2,
+                    col: 9,
+                }, {
+                    row: 5,
+                    col: 9,
+                }]
             },
         ]);
     });
 });
 
 describe('parseWave', () => {
-    let out: ParserOutput = {};
+    let out: ParserOutput;
     const lineNum = 1;
 
     beforeEach(() => {
-        out = {};
+        out = { metadata: {} };
     });
 
     it('should parse valid wave', () => {
         expect(parseWave(out, lineNum, 'W1 100 200 300 601')).equal(null);
-        expect(out).to.deep.equal({
-            1: {
-                iceTimes: [100, 200, 300],
-                waveLength: 601,
-                actions: [],
-            },
+        expect(out[1]).to.deep.equal({
+            iceTimes: [100, 200, 300],
+            waveLength: 601,
+            actions: [],
         });
     });
 
@@ -270,7 +273,7 @@ describe("parseFodder", () => {
     const lineNum = 1;
 
     beforeEach(() => {
-        out = {};
+        out = { metadata: {} };
     });
 
     it("should return an error if no wave has been set", () => {
@@ -334,14 +337,14 @@ describe("parseFodder", () => {
 
     it("should return an error if wave value is invalid", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 choose:1 wave:0");
-        expect(result).to.deep.equal(error(lineNum, "wave 的值应为 1~1 内的整数", "0"));
+        const result = parseFodder(out, lineNum, "C 300 2 9 choose:1 waves:0");
+        expect(result).to.deep.equal(error(lineNum, "waves 的值应为 1~1 内的整数", "0"));
     });
 
     it("should return an error if wave value is repeated", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 choose:1 wave:11");
-        expect(result).to.deep.equal(error(lineNum, "wave 重复", "1"));
+        const result = parseFodder(out, lineNum, "C 300 2 9 choose:1 waves:11");
+        expect(result).to.deep.equal(error(lineNum, "waves 重复", "1"));
     });
 
     it("should return an error if parameter format is invalid", () => {
@@ -376,8 +379,8 @@ describe("parseFodder", () => {
 
     it("should return an error if choose value is missing", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 wave:1");
-        expect(result).to.deep.equal(error(lineNum, "必须提供 choose 的值", "wave:1"));
+        const result = parseFodder(out, lineNum, "C 300 2 9 waves:1");
+        expect(result).to.deep.equal(error(lineNum, "必须提供 choose 的值", ""));
     });
 
     it("should add a Normal card action to the current wave", () => {
@@ -387,11 +390,14 @@ describe("parseFodder", () => {
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
-                type: "Normal",
                 time: 300,
                 shovelTime: undefined,
-                row: 2,
-                col: 9,
+                positions: [
+                    {
+                        type: "Normal",
+                        row: 2,
+                        col: 9,
+                    }]
             },
         ]);
     });
@@ -403,11 +409,14 @@ describe("parseFodder", () => {
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
-                type: "Puff",
                 time: 300,
                 shovelTime: undefined,
-                row: 2,
-                col: 9,
+                positions: [
+                    {
+                        type: "Puff",
+                        row: 2,
+                        col: 9,
+                    }]
             },
         ]);
     });
@@ -419,11 +428,14 @@ describe("parseFodder", () => {
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
-                type: "Normal",
                 time: 300,
                 shovelTime: 300 + 134,
-                row: 2,
-                col: 9,
+                positions: [
+                    {
+                        type: "Normal",
+                        row: 2,
+                        col: 9,
+                    }],
             },
         ]);
     });
@@ -435,11 +447,14 @@ describe("parseFodder", () => {
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
-                type: "Normal",
                 time: 300,
                 shovelTime: 600,
-                row: 2,
-                col: 9,
+                positions: [
+                    {
+                        type: "Normal",
+                        row: 2,
+                        col: 9,
+                    }],
             },
         ]);
     });
@@ -451,31 +466,33 @@ describe("parseFodder", () => {
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
-                type: "Normal",
                 time: 300,
                 shovelTime: undefined,
-                row: 2,
-                col: 9,
-            },
-            {
-                op: "FixedFodder",
-                type: "Normal",
-                time: 300,
-                shovelTime: undefined,
-                row: 5,
-                col: 9,
-            },
+                positions: [
+                    {
+                        type: "Normal",
+                        row: 2,
+                        col: 9,
+                    },
+                    {
+                        type: "Normal",
+                        row: 5,
+                        col: 9,
+                    }],
+            }
         ]);
     });
 
     it("should add extra arguments to the card action", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2'5 9 choose:2 wave:1");
+        const result = parseFodder(out, lineNum, "C 300 2'5 9 choose:2 waves:1");
         expect(result).equal(null);
         expect(out[1].actions).to.deep.equal([
             {
                 op: "SmartFodder",
-                "choices": [
+                time: 300,
+                shovelTime: undefined,
+                positions: [
                     {
                         "row": 2,
                         "col": 9,
@@ -487,24 +504,59 @@ describe("parseFodder", () => {
                         "type": "Normal"
                     }
                 ],
-                time: 300,
-                shovelTime: undefined,
                 choose: 2,
                 waves: [1],
             },
         ]);
     });
+});
 
+describe("parseMetadata", () => {
+    let out: ParserOutput;
+
+    beforeEach(() => {
+        out = { metadata: {} };
+    });
+
+    it("should reutrn an error if metadata arg is badly formatted", () => {
+        expect(parse(":")).to.deep.equal({
+            type: "Error",
+            lineNum: 1,
+            msg: "参数不可为空",
+            src: ":",
+        });
+    });
+
+    it("should parse a singleton", () => {
+        const input = "scene:PE";
+        expect(parse(input)).to.deep.equal({
+            metadata: {
+                scene: "PE",
+            },
+        });
+    });
+
+    it("should parse a whole line", () => {
+        const input = "cob:18 28 58 68";
+        expect(parse(input)).to.deep.equal({
+            metadata: {
+                cob: "18 28 58 68",
+            },
+        });
+    });
 });
 
 describe("parse", () => {
     it("should return empty object if input is empty", () => {
-        expect(parse("")).to.deep.equal({});
+        expect(parse("")).to.deep.equal({
+            metadata: {},
+        });
     });
 
     it("should parse a single wave with a cob and a fixed fodder", () => {
         const input = "W1 601\nP 300 2 9\nC +134+134 5 9\n";
-        const expectedOutput = {
+        expect(parse(input)).to.deep.equal({
+            metadata: {},
             1: {
                 iceTimes: [],
                 waveLength: 601,
@@ -512,26 +564,33 @@ describe("parse", () => {
                     {
                         op: "Cob",
                         time: 300,
-                        row: 2,
-                        col: 9,
+                        positions: [
+                            {
+                                row: 2,
+                                col: 9,
+                            }],
                     },
                     {
                         op: "FixedFodder",
-                        type: "Normal",
                         time: 300 + 134,
                         shovelTime: 300 + 134 + 134,
-                        row: 5,
-                        col: 9,
+                        positions: [
+                            {
+                                type: "Normal",
+                                row: 5,
+                                col: 9,
+                            }
+                        ]
                     },
                 ],
             },
-        };
-        expect(parse(input)).to.deep.equal(expectedOutput);
+        });
     });
 
-    it("should parse a single wave with a smart fodder", () => {
-        const input = "W1 601\nC 300~500 25 9 choose:1";
-        const expectedOutput = {
+    it("should parse a single wave (lowercase) with a smart fodder", () => {
+        const input = "w1 601\nC 300~500 25 9 choose:1";
+        expect(parse(input)).to.deep.equal({
+            metadata: {},
             1: {
                 iceTimes: [],
                 waveLength: 601,
@@ -540,7 +599,7 @@ describe("parse", () => {
                         op: "SmartFodder",
                         time: 300,
                         shovelTime: 500,
-                        choices: [
+                        positions: [
                             {
                                 type: "Normal",
                                 row: 2,
@@ -553,17 +612,17 @@ describe("parse", () => {
                             },
                         ],
                         choose: 1,
-                        waves: undefined,
+                        waves: [],
                     },
                 ],
             },
-        };
-        expect(parse(input)).to.deep.equal(expectedOutput);
+        });
     });
 
     it("should parse multiple waves", () => {
-        const input = "W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 wave:12\n";
-        const expectedOutput = {
+        const input = "W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n";
+        expect(parse(input)).to.deep.equal({
+            metadata: {},
             1: {
                 iceTimes: [],
                 waveLength: 601,
@@ -571,15 +630,17 @@ describe("parse", () => {
                     {
                         op: "Cob",
                         time: 300,
-                        row: 2,
-                        col: 9,
-                    },
-                    {
-                        op: "Cob",
-                        time: 300,
-                        row: 5,
-                        col: 9,
-                    },
+                        positions: [
+                            {
+                                row: 2,
+                                col: 9,
+                            },
+                            {
+                                row: 5,
+                                col: 9,
+                            }
+                        ]
+                    }
                 ],
             },
             2: {
@@ -590,7 +651,7 @@ describe("parse", () => {
                         op: "SmartFodder",
                         time: 400,
                         shovelTime: 400 + 134,
-                        choices: [
+                        positions: [
                             {
                                 type: "Normal",
                                 row: 3,
@@ -602,13 +663,13 @@ describe("parse", () => {
                     },
                 ],
             },
-        };
-        expect(parse(input)).to.deep.equal(expectedOutput);
+        });
     });
 
     it("should ignore comments", () => {
         const input = "W1 1 601 # this is a comment\nP 300 2 9\n";
-        const expectedOutput = {
+        expect(parse(input)).to.deep.equal({
+            metadata: {},
             1: {
                 iceTimes: [1],
                 waveLength: 601,
@@ -616,23 +677,25 @@ describe("parse", () => {
                     {
                         op: "Cob",
                         time: 300,
-                        row: 2,
-                        col: 9,
+                        positions: [
+                            {
+                                row: 2,
+                                col: 9,
+                            }
+                        ]
                     },
                 ],
             },
-        };
-        expect(parse(input)).to.deep.equal(expectedOutput);
+        });
     });
 
     it("should return an error for an unknown symbol", () => {
         const input = "W1 601\nX\n";
-        const expectedOutput = {
+        expect(parse(input)).to.deep.equal({
             type: "Error",
             lineNum: 2,
             msg: "未知符号",
             src: "X",
-        };
-        expect(parse(input)).to.deep.equal(expectedOutput);
+        });
     });
 });
