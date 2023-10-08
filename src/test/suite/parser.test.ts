@@ -1,130 +1,93 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { ParserOutput, error, parseCob, parseWave, parseFodder, parse } from '../../parser';
+import { ParserOutput, error, parseSetting, parseCob, parseWave, parseFodder, parse } from '../../parser';
 import { expect } from 'chai';
 
 describe("parseCob", () => {
     let out: ParserOutput;
-    const lineNum = 1;
 
     beforeEach(() => {
-        out = { metadata: {} };
+        out = { setting: {} };
     });
 
     it("should return an error if no wave is set", () => {
-        const line = "P 300 2 9";
-        const cobNum = 1;
-        const result = parseCob(out, 1, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "请先设定波次", line)
+        expect(parseCob(out, 1, "P 300 2 9", 1)).to.deep.equal(
+            error(1, "请先设定波次", "P 300 2 9")
         );
     });
 
     it("should return an error if time is missing", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "请提供炮生效时机", line)
+        expect(parseCob(out, 1, "P", 1)).to.deep.equal(
+            error(1, "请提供炮生效时机", "P")
         );
     });
 
     it("should return an error if time is negative", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P -1 2 9";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "时间应为非负整数", "-1")
+        expect(parseCob(out, 1, "P -1 2 9", 1)).to.deep.equal(
+            error(1, "时间应为非负整数", "-1")
         );
     });
 
     it("should return an error if delay is used without context", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P +220 2 9";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "没有延迟基准", "+220")
+        expect(parseCob(out, 1, "P +220 2 9", 1)).to.deep.equal(
+            error(1, "没有延迟基准", "+220")
         );
     });
 
     it("should return an error if rows are missing", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P 300";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "请提供落点行", line)
+        expect(parseCob(out, 1, "P 300", 1)).to.deep.equal(
+            error(1, "请提供落点行", "P 300")
         );
     });
 
     it("should return an error if number of rows dooes not match expected number of cobs", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "PP 300 2 9";
-        const cobNum = 2;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "请提供 2 个落点行", "2")
+        expect(parseCob(out, 1, "PP 300 2 9", 2)).to.deep.equal(
+            error(1, "请提供 2 个落点行", "2")
         );
     });
 
     it("should return an error if colToken is missing", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P 300 2";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "请提供落点列", line)
+        expect(parseCob(out, 1, "P 300 2", 1)).to.deep.equal(
+            error(1, "请提供落点列", "P 300 2")
         );
     });
 
     it("should return an error if row is not a number", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P 300 a 9";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "落点行应为 1~6 内的整数", "a")
+        expect(parseCob(out, 1, "P 300 a 9", 1)).to.deep.equal(
+            error(1, "落点行应为 1~6 内的整数", "a")
         );
     });
 
     it("should return an error if row is not within 1-6", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P 300 7 9";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "落点行应为 1~6 内的整数", "7")
+        expect(parseCob(out, 1, "P 300 7 9", 1)).to.deep.equal(
+            error(1, "落点行应为 1~6 内的整数", "7")
         );
     });
 
     it("should return an error if col is not a number", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P 300 2 a";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "落点列应为 0.0~10.0 内的数字", "a")
+        expect(parseCob(out, 1, "P 300 2 a", 1)).to.deep.equal(
+            error(1, "落点列应为 0.0~10.0 内的数字", "a")
         );
     });
 
     it("should return an error if col is not within 0.0-10.0", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P 300 2 11";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).to.deep.equal(
-            error(lineNum, "落点列应为 0.0~10.0 内的数字", "11")
+        expect(parseCob(out, 1, "P 300 2 11", 1)).to.deep.equal(
+            error(1, "落点列应为 0.0~10.0 内的数字", "11")
         );
     });
 
     it("should add a Cob action to the current wave", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "P 300 2 9";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).equal(null);
+        expect(parseCob(out, 1, "P 300 2 9", 1)).equal(null);
         expect(out[1]?.actions).to.deep.equal([
             {
                 op: "Cob",
@@ -139,11 +102,8 @@ describe("parseCob", () => {
 
     it("should add a delayed Cob action to the current wave", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        parseCob(out, lineNum, "P 300 2 9", 1);
-        const line = "P +134 2 9";
-        const cobNum = 1;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).equal(null);
+        expect(parseCob(out, 1, "P 300 2 9", 1)).equal(null);
+        expect(parseCob(out, 2, "P +134 2 9", 1)).equal(null);
         expect(out[1]?.actions).to.deep.equal([
             {
                 op: "Cob",
@@ -166,10 +126,7 @@ describe("parseCob", () => {
 
     it("should add multiple Cob actions to the current wave if there are multiple rows", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        const line = "PP 300 25 9";
-        const cobNum = 2;
-        const result = parseCob(out, lineNum, line, cobNum);
-        expect(result).equal(null);
+        expect(parseCob(out, 1, "PP 300 25 9", 2)).equal(null);
         expect(out[1]?.actions).to.deep.equal([
             {
                 op: "Cob",
@@ -188,14 +145,13 @@ describe("parseCob", () => {
 
 describe('parseWave', () => {
     let out: ParserOutput;
-    const lineNum = 1;
 
     beforeEach(() => {
-        out = { metadata: {} };
+        out = { setting: {} };
     });
 
     it('should parse valid wave', () => {
-        expect(parseWave(out, lineNum, 'W1 100 200 300 601')).equal(null);
+        expect(parseWave(out, 1, 'W1 100 200 300 601')).equal(null);
         expect(out[1]).to.deep.equal({
             iceTimes: [100, 200, 300],
             waveLength: 601,
@@ -204,189 +160,159 @@ describe('parseWave', () => {
     });
 
     it('should return an error for invalid wave number', () => {
-        expect(parseWave(out, lineNum, 'W0 100 200 300 601',)).to.deep.equal({
-            type: 'Error',
-            lineNum,
-            msg: '波数应为 1~9 内的整数',
-            src: 'W0',
-        });
+        expect(parseWave(out, 1, 'W0 100 200 300 601',))
+            .to.deep.equal(error(1, '波数应为 1~9 内的整数', 'W0'));
     });
 
     it('should return an error for duplicate wave number', () => {
         out[1] = { iceTimes: [], waveLength: 601, actions: [] };
-        expect(parseWave(out, lineNum, 'W1 100 200 300 601',)).to.deep.equal({
-            type: 'Error',
-            lineNum,
-            msg: '波数重复',
-            src: 'W1',
-        });
+        expect(parseWave(out, 1, 'W1 100 200 300 601',))
+            .to.deep.equal(error(1, '波数重复', 'W1'));
     });
 
     it('should return an error for missing wave length', () => {
-        expect(parseWave(out, lineNum, 'W1',)).to.deep.equal({
-            type: 'Error',
-            lineNum,
-            msg: '请提供波长',
-            src: 'W1',
-        });
+        expect(parseWave(out, 1, 'W1',))
+            .to.deep.equal(error(1, '请提供波长', 'W1'));
     });
 
     it('should return an error for invalid wave length', () => {
-        expect(parseWave(out, lineNum, 'W1 100 200 300 0',)).to.deep.equal({
-            type: 'Error',
-            lineNum,
-            msg: '波长应为 >= 601 的整数',
-            src: '0',
-        });
+        expect(parseWave(out, 1, 'W1 100 200 300 0',))
+            .to.deep.equal(error(1, '波长应为 >= 601 的整数', '0'));
     });
 
     it('should return an error for invalid ice time', () => {
-        expect(parseWave(out, lineNum, 'W1 100 a 300 601',)).to.deep.equal({
-            type: 'Error',
-            lineNum,
-            msg: '用冰时机应为正整数',
-            src: 'a',
-        });
+        expect(parseWave(out, 1, 'W1 100 a 300 601',))
+            .to.deep.equal(error(1, '用冰时机应为正整数', 'a'));
     });
 
     it('should return an error for wave length less than last ice time', () => {
-        expect(parseWave(out, lineNum, 'W1 602 601',)).to.deep.equal({
-            type: 'Error',
-            lineNum,
-            msg: '波长应 >= 最后一次用冰时机',
-            src: 'W1 602 601',
-        });
+        expect(parseWave(out, 1, 'W1 602 601',))
+            .to.deep.equal(error(1, '波长应 >= 最后一次用冰时机', 'W1 602 601'));
     });
 
     it('should return an error for missing previous wave', () => {
-        expect(parseWave(out, lineNum, 'W2 601',)).to.deep.equal({
-            type: 'Error',
-            lineNum,
-            msg: '请先设定第 1 波',
-            src: 'W2',
-        });
+        expect(parseWave(out, 1, 'W2 601',))
+            .to.deep.equal(error(1, '请先设定第 1 波', 'W2'));
     });
 });
 
 describe("parseFodder", () => {
     let out: ParserOutput;
-    const lineNum = 1;
 
     beforeEach(() => {
-        out = { metadata: {} };
+        out = { setting: {} };
     });
 
     it("should return an error if no wave has been set", () => {
-        const result = parseFodder(out, lineNum, "C 300 2 9");
-        expect(result).to.deep.equal(error(lineNum, "请先设定波次", "C 300 2 9"));
+        expect(parseFodder(out, 1, "C 300 2 9"))
+            .to.deep.equal(error(1, "请先设定波次", "C 300 2 9"));
     });
 
     it("should return an error if time is missing", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C");
-        expect(result).to.deep.equal(error(lineNum, "请提供用垫时机", "C"));
+        expect(parseFodder(out, 1, "C"))
+            .to.deep.equal(error(1, "请提供用垫时机", "C"));
     });
 
     it("should return an error if delay is used without context", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C +134 2 9");
-        expect(result).to.deep.equal(error(lineNum, "没有延迟基准", "+134"));
+        expect(parseFodder(out, 1, "C +134 2 9"))
+            .to.deep.equal(error(1, "没有延迟基准", "+134"));
     });
 
     it("should return an error if shovel time is negative", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 100+-134 2 9");
-        expect(result).to.deep.equal(error(lineNum, "时间应为非负整数", "-134"));
+        expect(parseFodder(out, 1, "C 100+-134 2 9"))
+            .to.deep.equal(error(1, "时间应为非负整数", "-134"));
     });
 
     it("should return an error if shovel time is earlier than fodder time", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300~299 2 9");
-        expect(result).to.deep.equal(error(lineNum, "铲除时机不可早于用垫时机", "299"));
+        expect(parseFodder(out, 1, "C 300~299 2 9"))
+            .to.deep.equal(error(1, "铲除时机不可早于用垫时机", "299"));
     });
 
     it("should return an error if rows are missing", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300");
-        expect(result).to.deep.equal(error(lineNum, "请提供用垫行", "C 300"));
+        expect(parseFodder(out, 1, "C 300"))
+            .to.deep.equal(error(1, "请提供用垫行", "C 300"));
     });
 
     it("should return an error if colToken is missing", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2");
-        expect(result).to.deep.equal(error(lineNum, "请提供用垫列", "C 300 2"));
+        expect(parseFodder(out, 1, "C 300 2"))
+            .to.deep.equal(error(1, "请提供用垫列", "C 300 2"));
     });
 
     it("should return an error if rows are invalid", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 7 9");
-        expect(result).to.deep.equal(error(lineNum, "用垫行应为 1~6 内的整数", "7"));
+        expect(parseFodder(out, 1, "C 300 7 9"))
+            .to.deep.equal(error(1, "用垫行应为 1~6 内的整数", "7"));
     });
 
     it("should return an error if colToken is invalid", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 0");
-        expect(result).to.deep.equal(error(lineNum, "用垫列应为 1~9 内的整数", "0"));
+        expect(parseFodder(out, 1, "C 300 2 0"))
+            .to.deep.equal(error(1, "用垫列应为 1~9 内的整数", "0"));
     });
 
     it("should return an error if choose value is invalid", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 choose:0");
-        expect(result).to.deep.equal(error(lineNum, "choose 的值应为 1~1 内的整数", "0"));
+        expect(parseFodder(out, 1, "C 300 2 9 choose:0"))
+            .to.deep.equal(error(1, "choose 的值应为 1~1 内的整数", "0"));
     });
 
     it("should return an error if wave value is invalid", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 choose:1 waves:0");
-        expect(result).to.deep.equal(error(lineNum, "waves 的值应为 1~1 内的整数", "0"));
+        expect(parseFodder(out, 1, "C 300 2 9 choose:1 waves:0"))
+            .to.deep.equal(error(1, "waves 的值应为 1~1 内的整数", "0"));
     });
 
     it("should return an error if wave value is repeated", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 choose:1 waves:11");
-        expect(result).to.deep.equal(error(lineNum, "waves 重复", "1"));
+        expect(parseFodder(out, 1, "C 300 2 9 choose:1 waves:11"))
+            .to.deep.equal(error(1, "waves 重复", "1"));
     });
 
     it("should return an error if parameter format is invalid", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 ??");
-        expect(result).to.deep.equal(error(lineNum, "传参格式应为 [参数]:[值] ", "??"));
+        expect(parseFodder(out, 1, "C 300 2 9 ??"))
+            .to.deep.equal(error(1, "传参格式应为 [参数]:[值] ", "??"));
     });
 
     it("should return an error if parameter key is empty", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 :1");
-        expect(result).to.deep.equal(error(lineNum, "参数不可为空", ":1"));
+        expect(parseFodder(out, 1, "C 300 2 9 :1"))
+            .to.deep.equal(error(1, "参数不可为空", ":1"));
     });
 
     it("should return an error if parameter value is empty", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 choose:");
-        expect(result).to.deep.equal(error(lineNum, "值不可为空", "choose:"));
+        expect(parseFodder(out, 1, "C 300 2 9 choose:"))
+            .to.deep.equal(error(1, "值不可为空", "choose:"));
     });
 
     it("should return an error if parameter key is unknown", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 unknown:1");
-        expect(result).to.deep.equal(error(lineNum, "未知参数", "unknown"));
+        expect(parseFodder(out, 1, "C 300 2 9 wave:1"))
+            .to.deep.equal(error(1, "未知参数", "wave"));
     });
 
     it("should return an error if parameter key is duplicated", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 choose:1 choose:2");
-        expect(result).to.deep.equal(error(lineNum, "参数重复", "choose"));
+        expect(parseFodder(out, 1, "C 300 2 9 choose:1 choose:2"))
+            .to.deep.equal(error(1, "参数重复", "choose"));
     });
 
     it("should return an error if choose value is missing", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9 waves:1");
-        expect(result).to.deep.equal(error(lineNum, "必须提供 choose 的值", ""));
+        expect(parseFodder(out, 1, "C 300 2 9 waves:1"))
+            .to.deep.equal(error(1, "必须提供 choose 的值", ""));
     });
 
     it("should add a Normal card action to the current wave", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2 9");
-        expect(result).equal(null);
+        expect(parseFodder(out, 1, "C 300 2 9")).equal(null);
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
@@ -404,8 +330,7 @@ describe("parseFodder", () => {
 
     it("should add a Puff card action to the current wave", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2' 9");
-        expect(result).equal(null);
+        expect(parseFodder(out, 1, "C 300 2' 9")).equal(null);
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
@@ -423,8 +348,7 @@ describe("parseFodder", () => {
 
     it("should add a card action with relative shovel time to the current wave", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300+134 2 9");
-        expect(result).equal(null);
+        expect(parseFodder(out, 1, "C 300+134 2 9")).equal(null);
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
@@ -442,8 +366,7 @@ describe("parseFodder", () => {
 
     it("should add a card action with absolute shovel time to the current wave", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300~600 2 9");
-        expect(result).equal(null);
+        expect(parseFodder(out, 1, "C 300~600 2 9")).equal(null);
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
@@ -461,8 +384,7 @@ describe("parseFodder", () => {
 
     it("should add multiple card actions to the current wave", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 25 9");
-        expect(result).equal(null);
+        expect(parseFodder(out, 1, "C 300 25 9")).equal(null);
         expect(out[1].actions).to.deep.equal([
             {
                 op: "FixedFodder",
@@ -485,8 +407,7 @@ describe("parseFodder", () => {
 
     it("should add extra arguments to the card action", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        const result = parseFodder(out, lineNum, "C 300 2'5 9 choose:2 waves:1");
-        expect(result).equal(null);
+        expect(parseFodder(out, 1, "C 300 2'5 9 choose:2 waves:1")).equal(null);
         expect(out[1].actions).to.deep.equal([
             {
                 op: "SmartFodder",
@@ -511,14 +432,14 @@ describe("parseFodder", () => {
     });
 });
 
-describe("parseMetadata", () => {
+describe("parseSetting", () => {
     let out: ParserOutput;
 
     beforeEach(() => {
-        out = { metadata: {} };
+        out = { setting: {} };
     });
 
-    it("should reutrn an error if metadata arg is badly formatted", () => {
+    it("should reutrn an error if setting arg is badly formatted", () => {
         expect(parse(":")).to.deep.equal({
             type: "Error",
             lineNum: 1,
@@ -527,36 +448,114 @@ describe("parseMetadata", () => {
         });
     });
 
-    it("should parse a singleton", () => {
-        const input = "scene:PE";
-        expect(parse(input)).to.deep.equal({
-            metadata: {
-                scene: "PE",
-            },
+    it("should return an error scene is unknown", () => {
+        expect(parseSetting(out, 1, "scene:AQE"))
+            .to.deep.equal(error(1, "未知场地", "AQE"));
+    });
+
+    it("should parse scene", () => {
+        expect(parseSetting(out, 1, "scene:PE")).equal(null);
+        expect(out).to.deep.equal({
+            setting: {
+                scene: "PE"
+            }
         });
     });
 
-    it("should parse a whole line", () => {
-        const input = "cob:18 28 58 68";
-        expect(parse(input)).to.deep.equal({
-            metadata: {
-                cob: "18 28 58 68",
-            },
+    it("should parse scene case-insensitively", () => {
+        expect(parseSetting(out, 1, "scene:dE")).equal(null);
+        expect(out).to.deep.equal({
+            setting: {
+                scene: "DE"
+            }
         });
+    });
+
+    it("should parse scene alias", () => {
+        expect(parseSetting(out, 1, "scene:ME")).equal(null);
+        expect(out).to.deep.equal({
+            setting: {
+                scene: "RE"
+            }
+        });
+    });
+
+    it("should return an error if row / col is missing", () => {
+        expect(parseSetting(out, 1, "protect:1"))
+            .to.deep.equal(error(1, "请提供要保护的行与列", "1"));
+    });
+
+    it("should return an error if row is out of bound", () => {
+        expect(parseSetting(out, 1, "protect:08"))
+            .to.deep.equal(error(1, "保护行应为 1~6 内的整数", "0"));
+    });
+
+    it("should return an error if cob col is out of bound", () => {
+        expect(parseSetting(out, 1, "protect:19"))
+            .to.deep.equal(error(1, "炮所在列应为 1~8 内的整数", "9"));
+    });
+
+    it("should return an error if normal col is out of bound", () => {
+        expect(parseSetting(out, 1, "protect:10'"))
+            .to.deep.equal(error(1, "普通植物所在列应为 1~9 内的整数", "0"));
+    });
+
+    it("should return an error if positions are repeated", () => {
+        expect(parseSetting({ setting: {} }, 1, "protect:18 18"))
+            .to.deep.equal(error(1, "保护位置重叠", "18"));
+        expect(parseSetting({ setting: {} }, 1, "protect:19' 18"))
+            .to.deep.equal(error(1, "保护位置重叠", "18"));
+    });
+
+    it("should parse protect positions", () => {
+        expect(parseSetting(out, 1, "protect:18 29'")).equal(null);
+        expect(out).to.deep.equal({
+            setting: {
+                protect: [{
+                    type: "Cob",
+                    row: 1,
+                    col: 8,
+                },
+                {
+                    type: "Normal",
+                    row: 2,
+                    col: 9,
+                }],
+            }
+        });
+    });
+
+    it("should return an error if setting args are repeated", () => {
+        expect(parseSetting(out, 1, "scene:PE")).equal(null);
+        expect(parseSetting(out, 2, "scene:DE")).to.deep.equal(error(2, "参数重复", "scene"));
+    });
+
+    it("should return an error if setting arg is unknown", () => {
+        expect(parseSetting(out, 1, "cobs:1"))
+            .to.deep.equal(error(1, "未知参数", "cobs"));
     });
 });
 
 describe("parse", () => {
     it("should return empty object if input is empty", () => {
         expect(parse("")).to.deep.equal({
-            metadata: {},
+            setting: {},
         });
     });
 
+    it("should use scene information to deduce max rows", () => {
+        expect(parse("protect:68\nscene:DE"))
+            .to.deep.equal(error(1, "保护行应为 1~5 内的整数", "6"));
+    });
+
+    it("should return an error if scene is unknown", () => {
+        expect(parse("protect:68\nscene:AQE"))
+            .to.deep.equal(error(2, "未知场地", "AQE"));
+    });
+
     it("should parse a single wave with a cob and a fixed fodder", () => {
-        const input = "W1 601\nP 300 2 9\nC +134+134 5 9\n";
-        expect(parse(input)).to.deep.equal({
-            metadata: {},
+        expect(parse("W1 601\nP 300 2 9\nC +134+134 5 9\n")).to.deep.equal({
+            setting: {},
             1: {
                 iceTimes: [],
                 waveLength: 601,
@@ -588,9 +587,8 @@ describe("parse", () => {
     });
 
     it("should parse a single wave (lowercase) with a smart fodder", () => {
-        const input = "w1 601\nC 300~500 25 9 choose:1";
-        expect(parse(input)).to.deep.equal({
-            metadata: {},
+        expect(parse("w1 601\nC 300~500 25 9 choose:1")).to.deep.equal({
+            setting: {},
             1: {
                 iceTimes: [],
                 waveLength: 601,
@@ -620,9 +618,8 @@ describe("parse", () => {
     });
 
     it("should parse multiple waves", () => {
-        const input = "W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n";
-        expect(parse(input)).to.deep.equal({
-            metadata: {},
+        expect(parse("W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n")).to.deep.equal({
+            setting: {},
             1: {
                 iceTimes: [],
                 waveLength: 601,
@@ -667,9 +664,8 @@ describe("parse", () => {
     });
 
     it("should ignore comments", () => {
-        const input = "W1 1 601 # this is a comment\nP 300 2 9\n";
-        expect(parse(input)).to.deep.equal({
-            metadata: {},
+        expect(parse("W1 1 601 # this is a comment\nP 300 2 9\n")).to.deep.equal({
+            setting: {},
             1: {
                 iceTimes: [1],
                 waveLength: 601,
@@ -690,8 +686,7 @@ describe("parse", () => {
     });
 
     it("should return an error for an unknown symbol", () => {
-        const input = "W1 601\nX\n";
-        expect(parse(input)).to.deep.equal({
+        expect(parse("W1 601\nX\n")).to.deep.equal({
             type: "Error",
             lineNum: 2,
             msg: "未知符号",
