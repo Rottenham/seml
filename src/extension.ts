@@ -5,8 +5,8 @@ import * as path from 'path';
 import { parseSmash, isError } from './parser';
 const { execFile } = require('child_process');
 
-function runBinary(filename: string, args: string[]) {
-	const binaryPath = path.join(__dirname, 'bin', filename);
+function runBinary(filename: string, args: string[], jsonFilePath: string) {
+	const binaryPath = path.join(__dirname, "bin", filename);
 
 	execFile(binaryPath, args, (error: Error, stdout: string, stderr: string) => {
 		if (error) {
@@ -17,46 +17,61 @@ function runBinary(filename: string, args: string[]) {
 			vscode.window.showErrorMessage(`出错: ${stderr}`);
 			return;
 		}
+
+		fs.unlink(jsonFilePath, (err) => {
+			if (err) {
+				vscode.window.showErrorMessage(`删除 JSON 临时文件时出错: ${err.message}`);
+				return;
+			}
+		});
+
 		vscode.window.showInformationMessage(`${stdout}`);
 	});
-}
 
+}
 
 export function activate(context: vscode.ExtensionContext) {
 
-	let disposable = vscode.commands.registerCommand('seml.toJSON', () => {
+	let disposable = vscode.commands.registerCommand('seml.testSmash', () => {
 
 		const editor = vscode.window.activeTextEditor;
 		if (editor === undefined) {
 			return;
 		}
 
-		const out = parseSmash(editor.document.getText());
-		if (isError(out)) {
-			const { lineNum, msg, src } = out;
+		const parsedOutput = parseSmash(editor.document.getText());
+		if (isError(parsedOutput)) {
+			const { lineNum, msg, src } = parsedOutput;
 			vscode.window.showErrorMessage(`[第${lineNum}行] ${msg}: ${src}`);
 			return;
 		}
+		const { out, args } = parsedOutput;
 		const jsonOutput = JSON.stringify(out, null, 4);
 
-		const folderPath = editor.document.uri.fsPath;
-		const fileNameWithoutExt = path.basename(folderPath, path.extname(folderPath));
-		const dirName = path.dirname(folderPath);
-		const jsonFilePath = path.join(dirName, fileNameWithoutExt + '.json');
+		const semlFilePath = editor.document.uri.fsPath;
+		if (path.extname(semlFilePath) !== ".seml") {
+			vscode.window.showErrorMessage("请打开 .seml 文件");
+			return;
+		}
+		const dirName = path.dirname(semlFilePath);
+		const destDirName = path.join(dirName, "dest");
+		const baseName = path.basename(semlFilePath, ".seml");
 
-		fs.writeFile(jsonFilePath, jsonOutput, 'utf8', function (err) {
+		const jsonFilePath = path.join(dirName, `${baseName}.json`);
+		if (!fs.existsSync(destDirName)) {
+			fs.mkdirSync(destDirName);
+		}
+		const outputFilePath = path.join(destDirName, baseName + "_砸率测试");
+
+		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
 			if (err) {
-				vscode.window.showErrorMessage("JSON 保存失败");
-				console.error(err);
+				vscode.window.showErrorMessage(`JSON 保存失败: ${err.message}`);
 				return;
 			}
 
-			vscode.window.showInformationMessage(`JSON 已保存至 ${jsonFilePath}`);
-
-			vscode.workspace.openTextDocument(jsonFilePath).then(doc => {
-				vscode.window.showTextDocument(doc);
-			});
-			runBinary('hello.exe', ["-a", "hi"]);
+			runBinary('smash_test.exe',
+				[...Object.values(args).flatMap(x => x), "-f", jsonFilePath, "-o", outputFilePath],
+				jsonFilePath);
 		});
 	});
 

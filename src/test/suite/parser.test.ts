@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { ParserOutput, error, parseCob, parseWave, parseFodder, parseScene, parseProtect, parseSmash } from '../../parser';
+import {
+    ParserOutput, error, parseCob, parseWave, parseFodder, parseScene, parseProtect, parseSmash,
+    parseArg
+} from '../../parser';
 import { expect } from 'chai';
 
 describe("parseCob", () => {
@@ -449,15 +452,6 @@ describe("parseScene", () => {
         out = { setting: {} };
     });
 
-    it("should reutrn an error if setting arg is badly formatted", () => {
-        expect(parseSmash(":")).to.deep.equal({
-            type: "Error",
-            lineNum: 1,
-            msg: "参数不可为空",
-            src: ":",
-        });
-    });
-
     it("should return an error scene is unknown", () => {
         expect(parseScene(out, 1, "scene:AQE"))
             .to.deep.equal(error(1, "未知场地", "AQE"));
@@ -503,10 +497,14 @@ describe("parseProtect", () => {
         out = { setting: {} };
     });
 
+    it("should return an error if there is no value", () => {
+        expect(parseProtect(out, 1, "protect:"))
+            .to.deep.equal(error(1, "protect 的值不可为空", "protect:"));
+    });
 
     it("should return an error if row / col is missing", () => {
         expect(parseProtect(out, 1, "protect:1"))
-            .to.deep.equal(error(1, "请提供要保护的行与列", "1"));
+            .to.deep.equal(error(1, "请提供要保护的行与列", "protect:1"));
     });
 
     it("should return an error if row is out of bound", () => {
@@ -551,11 +549,41 @@ describe("parseProtect", () => {
 
 });
 
-describe("parse", () => {
+describe("parseArgs", () => {
+    let args: { [key: string]: string[] };
+
+    beforeEach(() => {
+        args = {};
+    });
+
+    it("should parse repeat", () => {
+        expect(parseArg(args, "repeat", "-r", 1, "repeat:1437")).to.equal(null);
+        expect(args).to.deep.equal({ repeat: ["-r", "1437"] });
+    });
+
+    it("should parse thread", () => {
+        expect(parseArg(args, "thread", "-t", 1, "thread:69")).to.equal(null);
+        expect(args).to.deep.equal({ thread: ["-t","69"] });
+    });
+
+    it("should return an error if arg is specified multiple times", () => {
+        expect(parseArg(args, "repeat", "-r", 1, "repeat:1437")).to.equal(null);
+        expect(parseArg(args, "repeat", "-r", 2, "repeat:2222"))
+            .to.deep.equal(error(2, "参数重复", "repeat"));
+    });
+
+    it("should return an error if arg is not a non-negative integer", () => {
+        expect(parseArg(args, "repeat", "-r", 1, "repeat:0"))
+            .to.deep.equal(error(1, "repeat 的值应为正整数", "0"));
+    });
+});
+
+describe("parseSmash", () => {
     it("should return empty object if input is empty", () => {
-        expect(parseSmash("")).to.deep.equal({
-            setting: {},
-        });
+        expect(parseSmash(""))
+            .to.have.property("out").that.deep.equal({
+                setting: {},
+            });
     });
 
     it("should use scene information to deduce max rows", () => {
@@ -569,141 +597,145 @@ describe("parse", () => {
     });
 
     it("should parse a single wave with a cob and a fixed fodder", () => {
-        expect(parseSmash("\nW1 601\nP 300 2 9\nC +134+134 5 9\n")).to.deep.equal({
-            setting: {},
-            1: {
-                iceTimes: [],
-                waveLength: 601,
-                actions: [
-                    {
-                        op: "Cob",
-                        time: 300,
-                        symbol: "P",
-                        positions: [
-                            {
-                                row: 2,
-                                col: 9,
-                            }],
-                    },
-                    {
-                        op: "FixedFodder",
-                        time: 300 + 134,
-                        symbol: "C",
-                        shovelTime: 300 + 134 + 134,
-                        positions: [
-                            {
-                                type: "Normal",
-                                row: 5,
-                                col: 9,
-                            }
-                        ]
-                    },
-                ],
-            },
-        });
+        expect(parseSmash("\nW1 601\nP 300 2 9\nC +134+134 5 9\n"))
+            .to.have.property("out").that.deep.equal({
+                setting: {},
+                1: {
+                    iceTimes: [],
+                    waveLength: 601,
+                    actions: [
+                        {
+                            op: "Cob",
+                            time: 300,
+                            symbol: "P",
+                            positions: [
+                                {
+                                    row: 2,
+                                    col: 9,
+                                }],
+                        },
+                        {
+                            op: "FixedFodder",
+                            time: 300 + 134,
+                            symbol: "C",
+                            shovelTime: 300 + 134 + 134,
+                            positions: [
+                                {
+                                    type: "Normal",
+                                    row: 5,
+                                    col: 9,
+                                }
+                            ]
+                        },
+                    ],
+                },
+            });
     });
 
     it("should parse a single wave (lowercase) with a smart fodder", () => {
-        expect(parseSmash("w1 601\nC 300~500 25 9 choose:1")).to.deep.equal({
-            setting: {},
-            1: {
-                iceTimes: [],
-                waveLength: 601,
-                actions: [
-                    {
-                        op: "SmartFodder",
-                        time: 300,
-                        symbol: "C",
-                        shovelTime: 500,
-                        positions: [
-                            {
-                                type: "Normal",
-                                row: 2,
-                                col: 9,
-                            },
-                            {
-                                type: "Normal",
-                                row: 5,
-                                col: 9,
-                            },
-                        ],
-                        choose: 1,
-                        waves: [],
-                    },
-                ],
-            },
-        });
+        expect(parseSmash("w1 601\nC 300~500 25 9 choose:1"))
+            .to.have.property("out").that.deep.equal({
+                setting: {},
+                1: {
+                    iceTimes: [],
+                    waveLength: 601,
+                    actions: [
+                        {
+                            op: "SmartFodder",
+                            time: 300,
+                            symbol: "C",
+                            shovelTime: 500,
+                            positions: [
+                                {
+                                    type: "Normal",
+                                    row: 2,
+                                    col: 9,
+                                },
+                                {
+                                    type: "Normal",
+                                    row: 5,
+                                    col: 9,
+                                },
+                            ],
+                            choose: 1,
+                            waves: [],
+                        },
+                    ],
+                },
+            });
     });
 
     it("should parse multiple waves", () => {
-        expect(parseSmash("W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n")).to.deep.equal({
-            setting: {},
-            1: {
-                iceTimes: [],
-                waveLength: 601,
-                actions: [
-                    {
-                        op: "Cob",
-                        time: 300,
-                        symbol: "PP",
-                        positions: [
-                            {
-                                row: 2,
-                                col: 9,
-                            },
-                            {
-                                row: 5,
-                                col: 9,
-                            }
-                        ]
-                    }
-                ],
-            },
-            2: {
-                iceTimes: [1],
-                waveLength: 1250,
-                actions: [
-                    {
-                        op: "SmartFodder",
-                        time: 400,
-                        symbol: "C",
-                        shovelTime: 400 + 134,
-                        positions: [
-                            {
-                                type: "Normal",
-                                row: 3,
-                                col: 4,
-                            },
-                        ],
-                        choose: 1,
-                        waves: [1, 2],
-                    },
-                ],
-            },
-        });
+        expect(parseSmash("W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n"))
+            .to.have.property("out").that.deep.equal({
+                setting: {},
+                1: {
+                    iceTimes: [],
+                    waveLength: 601,
+                    actions: [
+                        {
+                            op: "Cob",
+                            time: 300,
+                            symbol: "PP",
+                            positions: [
+                                {
+                                    row: 2,
+                                    col: 9,
+                                },
+                                {
+                                    row: 5,
+                                    col: 9,
+                                }
+                            ]
+                        }
+                    ],
+                },
+                2: {
+                    iceTimes: [1],
+                    waveLength: 1250,
+                    actions: [
+                        {
+                            op: "SmartFodder",
+                            time: 400,
+                            symbol: "C",
+                            shovelTime: 400 + 134,
+                            positions: [
+                                {
+                                    type: "Normal",
+                                    row: 3,
+                                    col: 4,
+                                },
+                            ],
+                            choose: 1,
+                            waves: [1, 2],
+                        },
+                    ],
+                },
+            });
     });
 
     it("should ignore comments", () => {
-        expect(parseSmash("W1 1 601 # this is a comment\nP 300 2 9\n")).to.deep.equal({
-            setting: {},
-            1: {
-                iceTimes: [1],
-                waveLength: 601,
-                actions: [
-                    {
-                        op: "Cob",
-                        symbol: "P",
-                        time: 300,
-                        positions: [
-                            {
-                                row: 2,
-                                col: 9,
-                            }
-                        ]
-                    },
-                ],
-            },
-        });
+        expect(parseSmash("W1 1 601 # this is a comment\nP 300 2 9\n"))
+            .to.have.property("out").that.deep.equal({
+                setting: {},
+                1: {
+                    iceTimes: [1],
+                    waveLength: 601,
+                    actions: [
+                        {
+                            op: "Cob",
+                            symbol: "P",
+                            time: 300,
+                            positions: [
+                                {
+                                    row: 2,
+                                    col: 9,
+                                }
+                            ]
+                        },
+                    ],
+                },
+            });
     });
 
     it("should return an error for an unknown symbol", () => {

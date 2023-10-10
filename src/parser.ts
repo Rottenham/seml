@@ -254,23 +254,6 @@ export function parseCob(out: ParserOutput, lineNum: number, line: string, cobNu
 	return null;
 }
 
-function parseArg(lineNum: number, argToken: string): { key: string, value: string } | Error {
-	if (!argToken.includes(":")) {
-		return error(lineNum, "传参格式应为 [参数]:[值] ", argToken);
-	}
-
-	const key = argToken.split(":")[0]!, value = argToken.split(":")[1]!;
-
-	if (key.length === 0) {
-		return error(lineNum, "参数不可为空", argToken);
-	}
-	if (value.length === 0) {
-		return error(lineNum, "值不可为空", argToken);
-	}
-
-	return { key: key.trim(), value: value.trim() };
-}
-
 export function parseFodder(out: ParserOutput, lineNum: number, line: string): null | Error {
 	const [currWaveNum, currWave] = lastWave(out);
 	if (currWaveNum === undefined || currWave === undefined) {
@@ -327,13 +310,21 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 
 		const fodderArgs: { "choose"?: number, "waves"?: number[] } = {};
 		for (const fodderArgToken of fodderArgTokens) {
-			const parsedFodderArg = parseArg(lineNum, fodderArgToken);
 
-			if (isError(parsedFodderArg)) {
-				return parsedFodderArg;
+			if (!fodderArgToken.includes(":")) {
+				return error(lineNum, "传参格式应为 [参数]:[值] ", fodderArgToken);
 			}
 
-			const { key, value } = parsedFodderArg;
+			let key = fodderArgToken.split(":")[0]!;
+			let value = fodderArgToken.split(":")[1]!;
+
+			if (key.length === 0) {
+				return error(lineNum, "参数不可为空", fodderArgToken);
+			}
+			if (value.length === 0) {
+				return error(lineNum, "值不可为空", fodderArgToken);
+			}
+
 			if (key in fodderArgs) {
 				return error(lineNum, "参数重复", key);
 			}
@@ -428,7 +419,11 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 }
 
 export function parseScene(out: ParserOutput, lineNum: number, line: string): null | Error {
+	if ("scene" in out.setting) {
+		return error(lineNum, "参数重复", "scene");
+	}
 	const value = line.split(":").slice(1).join(":");
+
 	const upperCasedValue = value.toUpperCase();
 	if (["DE", "NE"].includes(upperCasedValue)) {
 		out.setting.scene = "NE";
@@ -444,6 +439,10 @@ export function parseScene(out: ParserOutput, lineNum: number, line: string): nu
 
 export function parseProtect(out: ParserOutput, lineNum: number, line: string): null | Error {
 	const value = line.split(":").slice(1).join(":");
+	if (value.length === 0) {
+		return error(lineNum, "protect 的值不可为空", line);
+	}
+
 	out.setting.protect = [];
 
 	for (let posToken of value.split(" ")) {
@@ -480,13 +479,30 @@ export function parseProtect(out: ParserOutput, lineNum: number, line: string): 
 	return null;
 }
 
+export function parseArg(args: { [key: string]: string[] }, argName: string, argFlag: string,
+	lineNum: number, line: string): null | Error {
+	if (argName in args) {
+		return error(lineNum, "参数重复", argName);
+	}
+	const value = line.split(":").slice(1).join(":");
+
+	const parsedValue = strictParseInt(value);
+	if (isNaN(parsedValue) || parsedValue <= 0) {
+		return error(lineNum, `${argName} 的值应为正整数`, value);
+	}
+	args[argName] = [argFlag, parsedValue.toString()];
+	return null;
+}
+
 export function parseSmash(text: string) {
 	const out: ParserOutput = { setting: {} };
+	const args: { [key: string]: string[] } = {};
+
 	const lines = text.split(/\r?\n/);
 
 	for (const [i, originalLine] of lines.entries()) {
 		const lineNum = i + 1;
-		const line = originalLine.split("#")[0]!.trim();
+		const line = originalLine.split("#")[0]!.trim(); // ignore comments
 		if (line.startsWith("scene:")) {
 			const scene = parseScene(out, lineNum, line);
 			if (isError(scene)) {
@@ -499,13 +515,17 @@ export function parseSmash(text: string) {
 	for (const [i, originalLine] of lines.entries()) {
 		const lineNum = i + 1;
 		const line = originalLine.split("#")[0]!.trim(); // ignore comments
-		if (line.length > 0 && !line.startsWith("scene")) {
+		if (line.length > 0 && !line.startsWith("scene:")) {
 			const symbol = line.split(" ")[0]!;
 			const upperCasedSymbol = symbol.toUpperCase();
 
 			let parseResult = null;
 			if (symbol.startsWith("protect:")) {
 				parseResult = parseProtect(out, lineNum, line);
+			} else if (symbol.startsWith("repeat:")) {
+				parseResult = parseArg(args, "repeat", "-r", lineNum, line);
+			} else if (symbol.startsWith("thread:")) {
+				parseResult = parseArg(args, "thread", "-t", lineNum, line);
 			} else if (upperCasedSymbol.startsWith("W")) {
 				parseResult = parseWave(out, lineNum, line);
 			} else if (["B", "P", "D"].includes(upperCasedSymbol)) {
@@ -523,7 +543,7 @@ export function parseSmash(text: string) {
 			}
 		}
 	}
-	return out;
+	return { out, args };
 }
 
 function lastWave(out: ParserOutput): [number | undefined, Wave | undefined] {

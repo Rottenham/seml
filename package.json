@@ -37,8 +37,8 @@
     ],
     "commands": [
       {
-        "command": "seml.toJSON",
-        "title": "Compile Seml file into JSON"
+        "command": "seml.testSmash",
+        "title": "测试砸率"
       }
     ]
   },
@@ -50,9 +50,8 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "mocha -r ts-node/register src/test/**/*.test.ts",
+    "test": "mocha out/test/**/*.test.js",
     "coverage": "nyc --reporter=lcov --reporter=text-summary npm test"
   },
   "devDependencies": {

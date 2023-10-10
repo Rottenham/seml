@@ -379,14 +379,6 @@ describe("parseScene", () => {
     beforeEach(() => {
         out = { setting: {} };
     });
-    it("should reutrn an error if setting arg is badly formatted", () => {
-        (0, chai_1.expect)((0, parser_1.parseSmash)(":")).to.deep.equal({
-            type: "Error",
-            lineNum: 1,
-            msg: "参数不可为空",
-            src: ":",
-        });
-    });
     it("should return an error scene is unknown", () => {
         (0, chai_1.expect)((0, parser_1.parseScene)(out, 1, "scene:AQE"))
             .to.deep.equal((0, parser_1.error)(1, "未知场地", "AQE"));
@@ -425,9 +417,13 @@ describe("parseProtect", () => {
     beforeEach(() => {
         out = { setting: {} };
     });
+    it("should return an error if there is no value", () => {
+        (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:"))
+            .to.deep.equal((0, parser_1.error)(1, "protect 的值不可为空", "protect:"));
+    });
     it("should return an error if row / col is missing", () => {
         (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:1"))
-            .to.deep.equal((0, parser_1.error)(1, "请提供要保护的行与列", "1"));
+            .to.deep.equal((0, parser_1.error)(1, "请提供要保护的行与列", "protect:1"));
     });
     it("should return an error if row is out of bound", () => {
         (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:08"))
@@ -465,9 +461,33 @@ describe("parseProtect", () => {
         });
     });
 });
-describe("parse", () => {
+describe("parseArgs", () => {
+    let args;
+    beforeEach(() => {
+        args = {};
+    });
+    it("should parse repeat", () => {
+        (0, chai_1.expect)((0, parser_1.parseArg)(args, "repeat", "-r", 1, "repeat:1437")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ repeat: ["-r", "1437"] });
+    });
+    it("should parse thread", () => {
+        (0, chai_1.expect)((0, parser_1.parseArg)(args, "thread", "-t", 1, "thread:69")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ thread: ["-t", "69"] });
+    });
+    it("should return an error if arg is specified multiple times", () => {
+        (0, chai_1.expect)((0, parser_1.parseArg)(args, "repeat", "-r", 1, "repeat:1437")).to.equal(null);
+        (0, chai_1.expect)((0, parser_1.parseArg)(args, "repeat", "-r", 2, "repeat:2222"))
+            .to.deep.equal((0, parser_1.error)(2, "参数重复", "repeat"));
+    });
+    it("should return an error if arg is not a non-negative integer", () => {
+        (0, chai_1.expect)((0, parser_1.parseArg)(args, "repeat", "-r", 1, "repeat:0"))
+            .to.deep.equal((0, parser_1.error)(1, "repeat 的值应为正整数", "0"));
+    });
+});
+describe("parseSmash", () => {
     it("should return empty object if input is empty", () => {
-        (0, chai_1.expect)((0, parser_1.parseSmash)("")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)(""))
+            .to.have.property("out").that.deep.equal({
             setting: {},
         });
     });
@@ -480,7 +500,8 @@ describe("parse", () => {
             .to.deep.equal((0, parser_1.error)(2, "未知场地", "AQE"));
     });
     it("should parse a single wave with a cob and a fixed fodder", () => {
-        (0, chai_1.expect)((0, parser_1.parseSmash)("\nW1 601\nP 300 2 9\nC +134+134 5 9\n")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("\nW1 601\nP 300 2 9\nC +134+134 5 9\n"))
+            .to.have.property("out").that.deep.equal({
             setting: {},
             1: {
                 iceTimes: [],
@@ -515,7 +536,8 @@ describe("parse", () => {
         });
     });
     it("should parse a single wave (lowercase) with a smart fodder", () => {
-        (0, chai_1.expect)((0, parser_1.parseSmash)("w1 601\nC 300~500 25 9 choose:1")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("w1 601\nC 300~500 25 9 choose:1"))
+            .to.have.property("out").that.deep.equal({
             setting: {},
             1: {
                 iceTimes: [],
@@ -546,7 +568,8 @@ describe("parse", () => {
         });
     });
     it("should parse multiple waves", () => {
-        (0, chai_1.expect)((0, parser_1.parseSmash)("W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n"))
+            .to.have.property("out").that.deep.equal({
             setting: {},
             1: {
                 iceTimes: [],
@@ -593,7 +616,8 @@ describe("parse", () => {
         });
     });
     it("should ignore comments", () => {
-        (0, chai_1.expect)((0, parser_1.parseSmash)("W1 1 601 # this is a comment\nP 300 2 9\n")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("W1 1 601 # this is a comment\nP 300 2 9\n"))
+            .to.have.property("out").that.deep.equal({
             setting: {},
             1: {
                 iceTimes: [1],

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseSmash = exports.parseProtect = exports.parseScene = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
+exports.parseSmash = exports.parseArg = exports.parseProtect = exports.parseScene = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
 function error(lineNum, msg, src) {
     return { type: "Error", lineNum, msg, src };
 }
@@ -164,19 +164,6 @@ function parseCob(out, lineNum, line, cobNum) {
     return null;
 }
 exports.parseCob = parseCob;
-function parseArg(lineNum, argToken) {
-    if (!argToken.includes(":")) {
-        return error(lineNum, "传参格式应为 [参数]:[值] ", argToken);
-    }
-    const key = argToken.split(":")[0], value = argToken.split(":")[1];
-    if (key.length === 0) {
-        return error(lineNum, "参数不可为空", argToken);
-    }
-    if (value.length === 0) {
-        return error(lineNum, "值不可为空", argToken);
-    }
-    return { key: key.trim(), value: value.trim() };
-}
 function parseFodder(out, lineNum, line) {
     const [currWaveNum, currWave] = lastWave(out);
     if (currWaveNum === undefined || currWave === undefined) {
@@ -227,11 +214,17 @@ function parseFodder(out, lineNum, line) {
         }
         const fodderArgs = {};
         for (const fodderArgToken of fodderArgTokens) {
-            const parsedFodderArg = parseArg(lineNum, fodderArgToken);
-            if (isError(parsedFodderArg)) {
-                return parsedFodderArg;
+            if (!fodderArgToken.includes(":")) {
+                return error(lineNum, "传参格式应为 [参数]:[值] ", fodderArgToken);
             }
-            const { key, value } = parsedFodderArg;
+            let key = fodderArgToken.split(":")[0];
+            let value = fodderArgToken.split(":")[1];
+            if (key.length === 0) {
+                return error(lineNum, "参数不可为空", fodderArgToken);
+            }
+            if (value.length === 0) {
+                return error(lineNum, "值不可为空", fodderArgToken);
+            }
             if (key in fodderArgs) {
                 return error(lineNum, "参数重复", key);
             }
@@ -317,6 +310,9 @@ function parseFodder(out, lineNum, line) {
 }
 exports.parseFodder = parseFodder;
 function parseScene(out, lineNum, line) {
+    if ("scene" in out.setting) {
+        return error(lineNum, "参数重复", "scene");
+    }
     const value = line.split(":").slice(1).join(":");
     const upperCasedValue = value.toUpperCase();
     if (["DE", "NE"].includes(upperCasedValue)) {
@@ -336,6 +332,9 @@ function parseScene(out, lineNum, line) {
 exports.parseScene = parseScene;
 function parseProtect(out, lineNum, line) {
     const value = line.split(":").slice(1).join(":");
+    if (value.length === 0) {
+        return error(lineNum, "protect 的值不可为空", line);
+    }
     out.setting.protect = [];
     for (let posToken of value.split(" ")) {
         let isNormal = false;
@@ -364,12 +363,26 @@ function parseProtect(out, lineNum, line) {
     return null;
 }
 exports.parseProtect = parseProtect;
+function parseArg(args, argName, argFlag, lineNum, line) {
+    if (argName in args) {
+        return error(lineNum, "参数重复", argName);
+    }
+    const value = line.split(":").slice(1).join(":");
+    const parsedValue = strictParseInt(value);
+    if (isNaN(parsedValue) || parsedValue <= 0) {
+        return error(lineNum, `${argName} 的值应为正整数`, value);
+    }
+    args[argName] = [argFlag, parsedValue.toString()];
+    return null;
+}
+exports.parseArg = parseArg;
 function parseSmash(text) {
     const out = { setting: {} };
+    const args = {};
     const lines = text.split(/\r?\n/);
     for (const [i, originalLine] of lines.entries()) {
         const lineNum = i + 1;
-        const line = originalLine.split("#")[0].trim();
+        const line = originalLine.split("#")[0].trim(); // ignore comments
         if (line.startsWith("scene:")) {
             const scene = parseScene(out, lineNum, line);
             if (isError(scene)) {
@@ -381,12 +394,18 @@ function parseSmash(text) {
     for (const [i, originalLine] of lines.entries()) {
         const lineNum = i + 1;
         const line = originalLine.split("#")[0].trim(); // ignore comments
-        if (line.length > 0 && !line.startsWith("scene")) {
+        if (line.length > 0 && !line.startsWith("scene:")) {
             const symbol = line.split(" ")[0];
             const upperCasedSymbol = symbol.toUpperCase();
             let parseResult = null;
             if (symbol.startsWith("protect:")) {
                 parseResult = parseProtect(out, lineNum, line);
+            }
+            else if (symbol.startsWith("repeat:")) {
+                parseResult = parseArg(args, "repeat", "-r", lineNum, line);
+            }
+            else if (symbol.startsWith("thread:")) {
+                parseResult = parseArg(args, "thread", "-t", lineNum, line);
             }
             else if (upperCasedSymbol.startsWith("W")) {
                 parseResult = parseWave(out, lineNum, line);
@@ -408,7 +427,7 @@ function parseSmash(text) {
             }
         }
     }
-    return out;
+    return { out, args };
 }
 exports.parseSmash = parseSmash;
 function lastWave(out) {
