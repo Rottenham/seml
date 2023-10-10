@@ -24,7 +24,7 @@ function runBinary(filename: string, args: string[], jsonFilePath: string) {
 				return;
 			}
 		});
-
+		
 		vscode.window.showInformationMessage(`${stdout}`);
 	});
 
@@ -61,7 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!fs.existsSync(destDirName)) {
 			fs.mkdirSync(destDirName);
 		}
-		const outputFilePath = path.join(destDirName, baseName + "_砸率测试");
+		const outputFilePath = path.join(destDirName, baseName + "_smash");
 
 		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
 			if (err) {

@@ -52,7 +52,7 @@ function activate(context) {
         if (!fs.existsSync(destDirName)) {
             fs.mkdirSync(destDirName);
         }
-        const outputFilePath = path.join(destDirName, baseName + "_砸率测试");
+        const outputFilePath = path.join(destDirName, baseName + "_smash");
         fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
             if (err) {
                 vscode.window.showErrorMessage(`JSON 保存失败: ${err.message}`);
