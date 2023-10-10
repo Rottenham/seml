@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parse = exports.parseSetting = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
+exports.parseSmash = exports.parseProtect = exports.parseScene = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
 function error(lineNum, msg, src) {
     return { type: "Error", lineNum, msg, src };
 }
@@ -10,16 +10,12 @@ function isError(result) {
 }
 exports.isError = isError;
 function getMaxRows(scene) {
-    if (scene === undefined || scene === "PE") {
+    if (scene === undefined || scene === "FE") {
         return 6;
     }
     else {
         return 5;
     }
-}
-function rangeOverlap(range1, range2) {
-    console.assert(range1.start <= range1.end && range2.start <= range2.end);
-    return range1.start <= range2.end && range2.start <= range1.end;
 }
 function parseWave(out, lineNum, line) {
     const parseWaveNum = (waveNumToken) => {
@@ -120,6 +116,7 @@ function parseRows(lineNum, rowsToken, expectedNum, suffix, description) {
             rows.push({ row, hasSuffix });
         }
     }
+    rows.sort((a, b) => a.row - b.row);
     return rows;
 }
 ;
@@ -136,7 +133,7 @@ function parseCob(out, lineNum, line, cobNum) {
         return col;
     };
     const tokens = line.split(" ");
-    const timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3];
+    const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3];
     if (timeToken === undefined) {
         return error(lineNum, "请提供炮生效时机", line);
     }
@@ -160,6 +157,7 @@ function parseCob(out, lineNum, line, cobNum) {
     }
     currWave.actions.push({
         op: "Cob",
+        symbol,
         time,
         positions: rows.map(row => ({ row: row.row, col: col }))
     });
@@ -268,7 +266,7 @@ function parseFodder(out, lineNum, line) {
         return { choose: fodderArgs.choose, waves: fodderArgs.waves ?? [] };
     };
     const tokens = line.split(" ");
-    const timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3], fodderArgTokens = tokens.slice(4);
+    const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3], fodderArgTokens = tokens.slice(4);
     if (timeToken === undefined) {
         return error(lineNum, "请提供用垫时机", line);
     }
@@ -298,6 +296,7 @@ function parseFodder(out, lineNum, line) {
     if (fodderArgs === null) {
         currWave.actions.push({
             op: "FixedFodder",
+            symbol,
             time: times[0],
             shovelTime: times[1] ?? undefined,
             positions
@@ -306,6 +305,7 @@ function parseFodder(out, lineNum, line) {
     else {
         currWave.actions.push({
             op: "SmartFodder",
+            symbol,
             time: times[0],
             shovelTime: times[1] ?? undefined,
             positions,
@@ -316,78 +316,64 @@ function parseFodder(out, lineNum, line) {
     return null;
 }
 exports.parseFodder = parseFodder;
-function parseSetting(out, lineNum, line) {
-    const parsedArg = parseArg(lineNum, line);
-    if (isError(parsedArg)) {
-        return parsedArg;
+function parseScene(out, lineNum, line) {
+    const value = line.split(":").slice(1).join(":");
+    const upperCasedValue = value.toUpperCase();
+    if (["DE", "NE"].includes(upperCasedValue)) {
+        out.setting.scene = "NE";
     }
-    const { key, value } = parsedArg;
-    if (key in out.setting) {
-        return error(lineNum, "参数重复", key);
+    else if (["PE", "FE"].includes(upperCasedValue)) {
+        out.setting.scene = "FE";
     }
-    if (key === 'scene') {
-        const valueUpperCased = value.toUpperCase();
-        if (["DE", "NE"].includes(valueUpperCased)) {
-            out.setting.scene = "DE";
-        }
-        else if (["PE", "FE"].includes(valueUpperCased)) {
-            out.setting.scene = "PE";
-        }
-        else if (["RE", "ME"].includes(valueUpperCased)) {
-            out.setting.scene = "RE";
-        }
-        else {
-            return error(lineNum, "未知场地", value);
-        }
-    }
-    else if (key === "protect") {
-        out.setting.protect = [];
-        for (let posToken of value.split(" ")) {
-            let isNormal = false;
-            if (posToken.endsWith("'")) {
-                posToken = posToken.slice(0, -1);
-                isNormal = true;
-            }
-            if (posToken.length < 2) {
-                return error(lineNum, "请提供要保护的行与列", posToken);
-            }
-            const rowToken = posToken[0], colToken = posToken[1];
-            const row = strictParseInt(rowToken), col = strictParseInt(colToken);
-            if (isNaN(row) || row < 1 || row > getMaxRows(out.setting.scene)) {
-                return error(lineNum, `保护行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
-            }
-            const maxCol = isNormal ? 9 : 8;
-            if (isNaN(col) || col < 1 || col > maxCol) {
-                return error(lineNum, `${isNormal ? "普通植物" : "炮"}所在列应为 1~${maxCol} 内的整数`, colToken);
-            }
-            const pos = { type: isNormal ? "Normal" : "Cob", row, col };
-            const posToColRange = (pos) => {
-                return { start: pos.col, end: pos.type === "Normal" ? pos.col : pos.col + 1 };
-            };
-            for (const prevPos of out.setting.protect) {
-                if (prevPos.row === row && rangeOverlap(posToColRange(prevPos), posToColRange(pos))) {
-                    return error(lineNum, "保护位置重叠", posToken);
-                }
-            }
-            out.setting.protect.push(pos);
-        }
+    else if (["RE", "ME"].includes(upperCasedValue)) {
+        out.setting.scene = "ME";
     }
     else {
-        return error(lineNum, "未知参数", key);
+        return error(lineNum, "未知场地", value);
     }
     return null;
 }
-exports.parseSetting = parseSetting;
-function parse(text) {
+exports.parseScene = parseScene;
+function parseProtect(out, lineNum, line) {
+    const value = line.split(":").slice(1).join(":");
+    out.setting.protect = [];
+    for (let posToken of value.split(" ")) {
+        let isNormal = false;
+        if (posToken.endsWith("'")) {
+            posToken = posToken.slice(0, -1);
+            isNormal = true;
+        }
+        if (posToken.length < 2) {
+            return error(lineNum, "请提供要保护的行与列", line);
+        }
+        const rowToken = posToken[0], colToken = posToken[1];
+        const row = strictParseInt(rowToken), col = strictParseInt(colToken);
+        if (isNaN(row) || row < 1 || row > getMaxRows(out.setting.scene)) {
+            return error(lineNum, `保护行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
+        }
+        const maxCol = isNormal ? 9 : 8;
+        if (isNaN(col) || col < 1 || col > maxCol) {
+            return error(lineNum, `${isNormal ? "普通植物" : "炮"}所在列应为 1~${maxCol} 内的整数`, colToken);
+        }
+        const pos = { type: isNormal ? "Normal" : "Cob", row, col };
+        if (out.setting.protect.map(pos => pos.row).includes(row)) {
+            return error(lineNum, "保护位置重叠", posToken);
+        }
+        out.setting.protect.push(pos);
+    }
+    return null;
+}
+exports.parseProtect = parseProtect;
+function parseSmash(text) {
     const out = { setting: {} };
     const lines = text.split(/\r?\n/);
     for (const [i, originalLine] of lines.entries()) {
         const lineNum = i + 1;
         const line = originalLine.split("#")[0].trim();
-        if (line.startsWith("scene")) {
-            const parseResult = parseSetting(out, lineNum, line);
-            if (isError(parseResult)) {
-                return parseResult;
+        if (line.startsWith("scene:")) {
+            const scene = parseScene(out, lineNum, line);
+            if (isError(scene)) {
+                return scene;
             }
             break;
         }
@@ -396,26 +382,26 @@ function parse(text) {
         const lineNum = i + 1;
         const line = originalLine.split("#")[0].trim(); // ignore comments
         if (line.length > 0 && !line.startsWith("scene")) {
-            const originalSymbol = line.split(" ")[0];
-            const symbol = originalSymbol.toUpperCase();
+            const symbol = line.split(" ")[0];
+            const upperCasedSymbol = symbol.toUpperCase();
             let parseResult = null;
-            if (symbol.includes(":")) {
-                parseResult = parseSetting(out, lineNum, line);
+            if (symbol.startsWith("protect:")) {
+                parseResult = parseProtect(out, lineNum, line);
             }
-            else if (symbol.startsWith("W")) {
+            else if (upperCasedSymbol.startsWith("W")) {
                 parseResult = parseWave(out, lineNum, line);
             }
-            else if (["B", "P", "D"].includes(symbol)) {
+            else if (["B", "P", "D"].includes(upperCasedSymbol)) {
                 parseResult = parseCob(out, lineNum, line, 1);
             }
-            else if (["BB", "PP", "DD"].includes(symbol)) {
+            else if (["BB", "PP", "DD"].includes(upperCasedSymbol)) {
                 parseResult = parseCob(out, lineNum, line, 2);
             }
-            else if (symbol === "C") {
+            else if (upperCasedSymbol === "C") {
                 parseResult = parseFodder(out, lineNum, line);
             }
             else {
-                parseResult = error(lineNum, "未知符号", originalSymbol);
+                parseResult = error(lineNum, "未知符号", symbol);
             }
             if (isError(parseResult)) {
                 return parseResult;
@@ -424,7 +410,7 @@ function parse(text) {
     }
     return out;
 }
-exports.parse = parse;
+exports.parseSmash = parseSmash;
 function lastWave(out) {
     let lastKey = Number(Object.keys(out)[Object.keys(out).length - 2]);
     if (isNaN(lastKey)) {

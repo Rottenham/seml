@@ -58,6 +58,7 @@ describe("parseCob", () => {
             {
                 op: "Cob",
                 time: 300,
+                symbol: "P",
                 positions: [{
                         row: 2,
                         col: 9,
@@ -72,6 +73,7 @@ describe("parseCob", () => {
         (0, chai_1.expect)(out[1]?.actions).to.deep.equal([
             {
                 op: "Cob",
+                symbol: "P",
                 time: 300,
                 positions: [{
                         row: 2,
@@ -80,6 +82,7 @@ describe("parseCob", () => {
             },
             {
                 op: "Cob",
+                symbol: "P",
                 time: 300 + 134,
                 positions: [{
                         row: 2,
@@ -94,6 +97,7 @@ describe("parseCob", () => {
         (0, chai_1.expect)(out[1]?.actions).to.deep.equal([
             {
                 op: "Cob",
+                symbol: "PP",
                 time: 300,
                 positions: [{
                         row: 2,
@@ -250,6 +254,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: undefined,
                 positions: [
                     {
@@ -268,6 +273,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: undefined,
                 positions: [
                     {
@@ -286,6 +292,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: 300 + 134,
                 positions: [
                     {
@@ -304,6 +311,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: 600,
                 positions: [
                     {
@@ -322,6 +330,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: undefined,
                 positions: [
                     {
@@ -345,6 +354,7 @@ describe("parseFodder", () => {
             {
                 op: "SmartFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: undefined,
                 positions: [
                     {
@@ -364,13 +374,13 @@ describe("parseFodder", () => {
         ]);
     });
 });
-describe("parseSetting", () => {
+describe("parseScene", () => {
     let out;
     beforeEach(() => {
         out = { setting: {} };
     });
     it("should reutrn an error if setting arg is badly formatted", () => {
-        (0, chai_1.expect)((0, parser_1.parse)(":")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)(":")).to.deep.equal({
             type: "Error",
             lineNum: 1,
             msg: "参数不可为空",
@@ -378,57 +388,67 @@ describe("parseSetting", () => {
         });
     });
     it("should return an error scene is unknown", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "scene:AQE"))
+        (0, chai_1.expect)((0, parser_1.parseScene)(out, 1, "scene:AQE"))
             .to.deep.equal((0, parser_1.error)(1, "未知场地", "AQE"));
     });
     it("should parse scene", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "scene:PE")).equal(null);
+        (0, chai_1.expect)((0, parser_1.parseScene)(out, 1, "scene:FE")).equal(null);
         (0, chai_1.expect)(out).to.deep.equal({
             setting: {
-                scene: "PE"
+                scene: "FE"
             }
         });
     });
     it("should parse scene case-insensitively", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "scene:dE")).equal(null);
+        (0, chai_1.expect)((0, parser_1.parseScene)(out, 1, "scene:nE")).equal(null);
         (0, chai_1.expect)(out).to.deep.equal({
             setting: {
-                scene: "DE"
+                scene: "NE"
             }
         });
     });
     it("should parse scene alias", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "scene:ME")).equal(null);
+        (0, chai_1.expect)((0, parser_1.parseScene)(out, 1, "scene:RE")).equal(null);
         (0, chai_1.expect)(out).to.deep.equal({
             setting: {
-                scene: "RE"
+                scene: "ME"
             }
         });
     });
+    it("should return an error if setting args are repeated", () => {
+        (0, chai_1.expect)((0, parser_1.parseScene)(out, 1, "scene:PE")).equal(null);
+        (0, chai_1.expect)((0, parser_1.parseScene)(out, 2, "scene:DE")).to.deep.equal((0, parser_1.error)(2, "参数重复", "scene"));
+    });
+});
+describe("parseProtect", () => {
+    let out;
+    beforeEach(() => {
+        out = { setting: {} };
+    });
     it("should return an error if row / col is missing", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "protect:1"))
+        (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:1"))
             .to.deep.equal((0, parser_1.error)(1, "请提供要保护的行与列", "1"));
     });
     it("should return an error if row is out of bound", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "protect:08"))
+        (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:08"))
             .to.deep.equal((0, parser_1.error)(1, "保护行应为 1~6 内的整数", "0"));
     });
     it("should return an error if cob col is out of bound", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "protect:19"))
+        (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:19"))
             .to.deep.equal((0, parser_1.error)(1, "炮所在列应为 1~8 内的整数", "9"));
     });
     it("should return an error if normal col is out of bound", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "protect:10'"))
+        (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:10'"))
             .to.deep.equal((0, parser_1.error)(1, "普通植物所在列应为 1~9 内的整数", "0"));
     });
     it("should return an error if positions are repeated", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)({ setting: {} }, 1, "protect:18 18"))
+        (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {} }, 1, "protect:18 18"))
             .to.deep.equal((0, parser_1.error)(1, "保护位置重叠", "18"));
-        (0, chai_1.expect)((0, parser_1.parseSetting)({ setting: {} }, 1, "protect:19' 18"))
+        (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {} }, 1, "protect:19' 18"))
             .to.deep.equal((0, parser_1.error)(1, "保护位置重叠", "18"));
     });
     it("should parse protect positions", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "protect:18 29'")).equal(null);
+        (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:18 29'")).equal(null);
         (0, chai_1.expect)(out).to.deep.equal({
             setting: {
                 protect: [{
@@ -444,31 +464,23 @@ describe("parseSetting", () => {
             }
         });
     });
-    it("should return an error if setting args are repeated", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "scene:PE")).equal(null);
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 2, "scene:DE")).to.deep.equal((0, parser_1.error)(2, "参数重复", "scene"));
-    });
-    it("should return an error if setting arg is unknown", () => {
-        (0, chai_1.expect)((0, parser_1.parseSetting)(out, 1, "cobs:1"))
-            .to.deep.equal((0, parser_1.error)(1, "未知参数", "cobs"));
-    });
 });
 describe("parse", () => {
     it("should return empty object if input is empty", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("")).to.deep.equal({
             setting: {},
         });
     });
     it("should use scene information to deduce max rows", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("protect:68\nscene:DE"))
+        (0, chai_1.expect)((0, parser_1.parseSmash)("protect:68\nscene:DE"))
             .to.deep.equal((0, parser_1.error)(1, "保护行应为 1~5 内的整数", "6"));
     });
     it("should return an error if scene is unknown", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("protect:68\nscene:AQE"))
+        (0, chai_1.expect)((0, parser_1.parseSmash)("protect:68\nscene:AQE"))
             .to.deep.equal((0, parser_1.error)(2, "未知场地", "AQE"));
     });
     it("should parse a single wave with a cob and a fixed fodder", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("W1 601\nP 300 2 9\nC +134+134 5 9\n")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("\nW1 601\nP 300 2 9\nC +134+134 5 9\n")).to.deep.equal({
             setting: {},
             1: {
                 iceTimes: [],
@@ -477,6 +489,7 @@ describe("parse", () => {
                     {
                         op: "Cob",
                         time: 300,
+                        symbol: "P",
                         positions: [
                             {
                                 row: 2,
@@ -487,6 +500,7 @@ describe("parse", () => {
                     {
                         op: "FixedFodder",
                         time: 300 + 134,
+                        symbol: "C",
                         shovelTime: 300 + 134 + 134,
                         positions: [
                             {
@@ -501,7 +515,7 @@ describe("parse", () => {
         });
     });
     it("should parse a single wave (lowercase) with a smart fodder", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("w1 601\nC 300~500 25 9 choose:1")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("w1 601\nC 300~500 25 9 choose:1")).to.deep.equal({
             setting: {},
             1: {
                 iceTimes: [],
@@ -510,6 +524,7 @@ describe("parse", () => {
                     {
                         op: "SmartFodder",
                         time: 300,
+                        symbol: "C",
                         shovelTime: 500,
                         positions: [
                             {
@@ -531,7 +546,7 @@ describe("parse", () => {
         });
     });
     it("should parse multiple waves", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n")).to.deep.equal({
             setting: {},
             1: {
                 iceTimes: [],
@@ -540,6 +555,7 @@ describe("parse", () => {
                     {
                         op: "Cob",
                         time: 300,
+                        symbol: "PP",
                         positions: [
                             {
                                 row: 2,
@@ -560,6 +576,7 @@ describe("parse", () => {
                     {
                         op: "SmartFodder",
                         time: 400,
+                        symbol: "C",
                         shovelTime: 400 + 134,
                         positions: [
                             {
@@ -576,7 +593,7 @@ describe("parse", () => {
         });
     });
     it("should ignore comments", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("W1 1 601 # this is a comment\nP 300 2 9\n")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("W1 1 601 # this is a comment\nP 300 2 9\n")).to.deep.equal({
             setting: {},
             1: {
                 iceTimes: [1],
@@ -584,6 +601,7 @@ describe("parse", () => {
                 actions: [
                     {
                         op: "Cob",
+                        symbol: "P",
                         time: 300,
                         positions: [
                             {
@@ -597,7 +615,7 @@ describe("parse", () => {
         });
     });
     it("should return an error for an unknown symbol", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("W1 601\nX\n")).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseSmash)("W1 601\nX\n")).to.deep.equal({
             type: "Error",
             lineNum: 2,
             msg: "未知符号",

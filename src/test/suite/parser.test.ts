@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { ParserOutput, error, parseSetting, parseCob, parseWave, parseFodder, parse } from '../../parser';
+import { ParserOutput, error, parseCob, parseWave, parseFodder, parseScene, parseProtect, parseSmash } from '../../parser';
 import { expect } from 'chai';
 
 describe("parseCob", () => {
@@ -92,6 +92,7 @@ describe("parseCob", () => {
             {
                 op: "Cob",
                 time: 300,
+                symbol: "P",
                 positions: [{
                     row: 2,
                     col: 9,
@@ -107,6 +108,7 @@ describe("parseCob", () => {
         expect(out[1]?.actions).to.deep.equal([
             {
                 op: "Cob",
+                symbol: "P",
                 time: 300,
                 positions: [{
                     row: 2,
@@ -115,6 +117,7 @@ describe("parseCob", () => {
             },
             {
                 op: "Cob",
+                symbol: "P",
                 time: 300 + 134,
                 positions: [{
                     row: 2,
@@ -130,6 +133,7 @@ describe("parseCob", () => {
         expect(out[1]?.actions).to.deep.equal([
             {
                 op: "Cob",
+                symbol: "PP",
                 time: 300,
                 positions: [{
                     row: 2,
@@ -317,6 +321,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: undefined,
                 positions: [
                     {
@@ -335,6 +340,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: undefined,
                 positions: [
                     {
@@ -353,6 +359,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: 300 + 134,
                 positions: [
                     {
@@ -371,6 +378,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: 600,
                 positions: [
                     {
@@ -389,6 +397,7 @@ describe("parseFodder", () => {
             {
                 op: "FixedFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: undefined,
                 positions: [
                     {
@@ -412,6 +421,7 @@ describe("parseFodder", () => {
             {
                 op: "SmartFodder",
                 time: 300,
+                symbol: "C",
                 shovelTime: undefined,
                 positions: [
                     {
@@ -432,7 +442,7 @@ describe("parseFodder", () => {
     });
 });
 
-describe("parseSetting", () => {
+describe("parseScene", () => {
     let out: ParserOutput;
 
     beforeEach(() => {
@@ -440,7 +450,7 @@ describe("parseSetting", () => {
     });
 
     it("should reutrn an error if setting arg is badly formatted", () => {
-        expect(parse(":")).to.deep.equal({
+        expect(parseSmash(":")).to.deep.equal({
             type: "Error",
             lineNum: 1,
             msg: "参数不可为空",
@@ -449,66 +459,80 @@ describe("parseSetting", () => {
     });
 
     it("should return an error scene is unknown", () => {
-        expect(parseSetting(out, 1, "scene:AQE"))
+        expect(parseScene(out, 1, "scene:AQE"))
             .to.deep.equal(error(1, "未知场地", "AQE"));
     });
 
     it("should parse scene", () => {
-        expect(parseSetting(out, 1, "scene:PE")).equal(null);
+        expect(parseScene(out, 1, "scene:FE")).equal(null);
         expect(out).to.deep.equal({
             setting: {
-                scene: "PE"
+                scene: "FE"
             }
         });
     });
 
     it("should parse scene case-insensitively", () => {
-        expect(parseSetting(out, 1, "scene:dE")).equal(null);
+        expect(parseScene(out, 1, "scene:nE")).equal(null);
         expect(out).to.deep.equal({
             setting: {
-                scene: "DE"
+                scene: "NE"
             }
         });
     });
 
     it("should parse scene alias", () => {
-        expect(parseSetting(out, 1, "scene:ME")).equal(null);
+        expect(parseScene(out, 1, "scene:RE")).equal(null);
         expect(out).to.deep.equal({
             setting: {
-                scene: "RE"
+                scene: "ME"
             }
         });
     });
 
+    it("should return an error if setting args are repeated", () => {
+        expect(parseScene(out, 1, "scene:PE")).equal(null);
+        expect(parseScene(out, 2, "scene:DE")).to.deep.equal(error(2, "参数重复", "scene"));
+    });
+});
+
+describe("parseProtect", () => {
+    let out: ParserOutput;
+
+    beforeEach(() => {
+        out = { setting: {} };
+    });
+
+
     it("should return an error if row / col is missing", () => {
-        expect(parseSetting(out, 1, "protect:1"))
+        expect(parseProtect(out, 1, "protect:1"))
             .to.deep.equal(error(1, "请提供要保护的行与列", "1"));
     });
 
     it("should return an error if row is out of bound", () => {
-        expect(parseSetting(out, 1, "protect:08"))
+        expect(parseProtect(out, 1, "protect:08"))
             .to.deep.equal(error(1, "保护行应为 1~6 内的整数", "0"));
     });
 
     it("should return an error if cob col is out of bound", () => {
-        expect(parseSetting(out, 1, "protect:19"))
+        expect(parseProtect(out, 1, "protect:19"))
             .to.deep.equal(error(1, "炮所在列应为 1~8 内的整数", "9"));
     });
 
     it("should return an error if normal col is out of bound", () => {
-        expect(parseSetting(out, 1, "protect:10'"))
+        expect(parseProtect(out, 1, "protect:10'"))
             .to.deep.equal(error(1, "普通植物所在列应为 1~9 内的整数", "0"));
     });
 
     it("should return an error if positions are repeated", () => {
-        expect(parseSetting({ setting: {} }, 1, "protect:18 18"))
+        expect(parseProtect({ setting: {} }, 1, "protect:18 18"))
             .to.deep.equal(error(1, "保护位置重叠", "18"));
-        expect(parseSetting({ setting: {} }, 1, "protect:19' 18"))
+        expect(parseProtect({ setting: {} }, 1, "protect:19' 18"))
             .to.deep.equal(error(1, "保护位置重叠", "18"));
     });
 
     it("should parse protect positions", () => {
-        expect(parseSetting(out, 1, "protect:18 29'")).equal(null);
+        expect(parseProtect(out, 1, "protect:18 29'")).equal(null);
         expect(out).to.deep.equal({
             setting: {
                 protect: [{
@@ -525,36 +549,27 @@ describe("parseSetting", () => {
         });
     });
 
-    it("should return an error if setting args are repeated", () => {
-        expect(parseSetting(out, 1, "scene:PE")).equal(null);
-        expect(parseSetting(out, 2, "scene:DE")).to.deep.equal(error(2, "参数重复", "scene"));
-    });
-
-    it("should return an error if setting arg is unknown", () => {
-        expect(parseSetting(out, 1, "cobs:1"))
-            .to.deep.equal(error(1, "未知参数", "cobs"));
-    });
 });
 
 describe("parse", () => {
     it("should return empty object if input is empty", () => {
-        expect(parse("")).to.deep.equal({
+        expect(parseSmash("")).to.deep.equal({
             setting: {},
         });
     });
 
     it("should use scene information to deduce max rows", () => {
-        expect(parse("protect:68\nscene:DE"))
+        expect(parseSmash("protect:68\nscene:DE"))
             .to.deep.equal(error(1, "保护行应为 1~5 内的整数", "6"));
     });
 
     it("should return an error if scene is unknown", () => {
-        expect(parse("protect:68\nscene:AQE"))
+        expect(parseSmash("protect:68\nscene:AQE"))
             .to.deep.equal(error(2, "未知场地", "AQE"));
     });
 
     it("should parse a single wave with a cob and a fixed fodder", () => {
-        expect(parse("W1 601\nP 300 2 9\nC +134+134 5 9\n")).to.deep.equal({
+        expect(parseSmash("\nW1 601\nP 300 2 9\nC +134+134 5 9\n")).to.deep.equal({
             setting: {},
             1: {
                 iceTimes: [],
@@ -563,6 +578,7 @@ describe("parse", () => {
                     {
                         op: "Cob",
                         time: 300,
+                        symbol: "P",
                         positions: [
                             {
                                 row: 2,
@@ -572,6 +588,7 @@ describe("parse", () => {
                     {
                         op: "FixedFodder",
                         time: 300 + 134,
+                        symbol: "C",
                         shovelTime: 300 + 134 + 134,
                         positions: [
                             {
@@ -587,7 +604,7 @@ describe("parse", () => {
     });
 
     it("should parse a single wave (lowercase) with a smart fodder", () => {
-        expect(parse("w1 601\nC 300~500 25 9 choose:1")).to.deep.equal({
+        expect(parseSmash("w1 601\nC 300~500 25 9 choose:1")).to.deep.equal({
             setting: {},
             1: {
                 iceTimes: [],
@@ -596,6 +613,7 @@ describe("parse", () => {
                     {
                         op: "SmartFodder",
                         time: 300,
+                        symbol: "C",
                         shovelTime: 500,
                         positions: [
                             {
@@ -618,7 +636,7 @@ describe("parse", () => {
     });
 
     it("should parse multiple waves", () => {
-        expect(parse("W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n")).to.deep.equal({
+        expect(parseSmash("W1 601\nPP 300 25 9\nW2 1 1250\nC 400+134 3 4 choose:1 waves:12\n")).to.deep.equal({
             setting: {},
             1: {
                 iceTimes: [],
@@ -627,6 +645,7 @@ describe("parse", () => {
                     {
                         op: "Cob",
                         time: 300,
+                        symbol: "PP",
                         positions: [
                             {
                                 row: 2,
@@ -647,6 +666,7 @@ describe("parse", () => {
                     {
                         op: "SmartFodder",
                         time: 400,
+                        symbol: "C",
                         shovelTime: 400 + 134,
                         positions: [
                             {
@@ -664,7 +684,7 @@ describe("parse", () => {
     });
 
     it("should ignore comments", () => {
-        expect(parse("W1 1 601 # this is a comment\nP 300 2 9\n")).to.deep.equal({
+        expect(parseSmash("W1 1 601 # this is a comment\nP 300 2 9\n")).to.deep.equal({
             setting: {},
             1: {
                 iceTimes: [1],
@@ -672,6 +692,7 @@ describe("parse", () => {
                 actions: [
                     {
                         op: "Cob",
+                        symbol: "P",
                         time: 300,
                         positions: [
                             {
@@ -686,7 +707,7 @@ describe("parse", () => {
     });
 
     it("should return an error for an unknown symbol", () => {
-        expect(parse("W1 601\nX\n")).to.deep.equal({
+        expect(parseSmash("W1 601\nX\n")).to.deep.equal({
             type: "Error",
             lineNum: 2,
             msg: "未知符号",

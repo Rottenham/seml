@@ -2,7 +2,25 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { parse, isError } from './parser';
+import { parseSmash, isError } from './parser';
+const { execFile } = require('child_process');
+
+function runBinary(filename: string, args: string[]) {
+	const binaryPath = path.join(__dirname, 'bin', filename);
+
+	execFile(binaryPath, args, (error: Error, stdout: string, stderr: string) => {
+		if (error) {
+			vscode.window.showErrorMessage(`出错: ${error.message}`);
+			return;
+		}
+		if (stderr) {
+			vscode.window.showErrorMessage(`出错: ${stderr}`);
+			return;
+		}
+		vscode.window.showInformationMessage(`${stdout}`);
+	});
+}
+
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -13,9 +31,9 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		const out = parse(editor.document.getText());
+		const out = parseSmash(editor.document.getText());
 		if (isError(out)) {
-			const {lineNum, msg, src} = out;
+			const { lineNum, msg, src } = out;
 			vscode.window.showErrorMessage(`[第${lineNum}行] ${msg}: ${src}`);
 			return;
 		}
@@ -38,6 +56,7 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.workspace.openTextDocument(jsonFilePath).then(doc => {
 				vscode.window.showTextDocument(doc);
 			});
+			runBinary('hello.exe', ["-a", "hi"]);
 		});
 	});
 
