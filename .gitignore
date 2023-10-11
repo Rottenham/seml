@@ -2,4 +2,3 @@ node_modules
 *.vsix
 .nyc_output
 coverage
-*/main.*
