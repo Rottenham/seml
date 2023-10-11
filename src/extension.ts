@@ -27,7 +27,6 @@ function runBinary(filename: string, args: string[], jsonFilePath: string) {
 		
 		vscode.window.showInformationMessage(`${stdout}`);
 	});
-
 }
 
 export function activate(context: vscode.ExtensionContext) {
