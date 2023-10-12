@@ -1,3 +1,4 @@
+import { start } from "repl";
 
 export type Error = { type: "Error", lineNum: number, msg: string, src: string };
 
@@ -61,6 +62,7 @@ export type ParserOutput = {
 	setting: {
 		protect?: ProtectPos[],
 		scene?: "NE" | "FE" | "ME",
+		variables?: { [key: string]: number },
 	},
 	[key: number]: Wave;
 };
@@ -512,14 +514,15 @@ export function parseIntArg(args: { [key: string]: string[] }, argName: string, 
 }
 
 export function parse(text: string) {
-	const out: ParserOutput = { setting: {} };
+	const out: ParserOutput = { setting: { variables: {} } };
 	const args: { [key: string]: string[] } = {};
 
-	const lines = text.split(/\r?\n/);
+	const lines = expandLines(text.split(/\r?\n/));
+	if (isError(lines)) {
+		return lines;
+	}
 
-	for (const [i, originalLine] of lines.entries()) {
-		const lineNum = i + 1;
-		const line = originalLine.split("#")[0]!.trim(); // ignore comments
+	for (const { lineNum, line } of lines) {
 		if (line.startsWith("scene:")) {
 			const scene = parseScene(out, lineNum, line);
 			if (isError(scene)) {
@@ -529,9 +532,7 @@ export function parse(text: string) {
 		}
 	}
 
-	for (const [i, originalLine] of lines.entries()) {
-		const lineNum = i + 1;
-		const line = originalLine.split("#")[0]!.trim(); // ignore comments
+	for (const { lineNum, line } of lines) {
 		if (line.length > 0 && !line.startsWith("scene:")) {
 			const symbol = line.split(" ")[0]!;
 			const upperCasedSymbol = symbol.toUpperCase();
@@ -560,6 +561,7 @@ export function parse(text: string) {
 			}
 		}
 	}
+	delete out.setting.variables;
 	return { out, args };
 }
 
@@ -586,4 +588,57 @@ function strictParseFloat(str: string) {
 		return NaN;
 	}
 	return parseFloat(str);
+}
+
+type Line = {
+	lineNum: number;
+	line: string;
+};
+
+export function expandLines(lines: string[]): Line[] | Error {
+	const originalLines: Line[] = lines.map((line, lineNum) =>
+		({ lineNum: lineNum + 1, line: line.split("#")[0]!.trim() }));
+	const expandedLines: Line[] = [];
+
+	const populateLineWithWave = (line: string, waveNum: number) => {
+		if (line.startsWith("w")) {
+			return `w${waveNum} ${line.split(" ").slice(1).join(" ")}`;
+		} else {
+			return line;
+		}
+	};
+
+	for (let cur = 0; cur < originalLines.length; cur++) {
+		let { lineNum, line } = originalLines[cur]!;
+
+		const symbol = line.split(" ")[0]!;
+
+		if (!(symbol.startsWith("w") && symbol.includes("~"))) {
+			expandedLines.push({ lineNum, line });
+		}
+		else {
+			const startWave = strictParseInt(symbol.slice(1, symbol.indexOf("~")));
+			const endWave = strictParseInt(symbol.slice(symbol.indexOf("~") + 1));
+			if (isNaN(startWave) || isNaN(endWave)) {
+				return error(lineNum, "波数应为正整数", symbol);
+			}
+			if (startWave > endWave) {
+				return error(lineNum, "起始波数应大于终止波数", symbol);
+			}
+
+			let nextCur = cur;
+			while (nextCur + 1 < originalLines.length
+				&& !originalLines[nextCur + 1]!.line.startsWith("w")) {
+				nextCur++;
+			}
+			for (let waveNum = startWave; waveNum <= endWave; waveNum++) {
+				for (let i = cur; i <= nextCur; i++) {
+					const { lineNum, line } = originalLines[i]!;
+					expandedLines.push({ lineNum, line: populateLineWithWave(line, waveNum) });
+				}
+			}
+			cur = nextCur;
+		}
+	}
+	return expandedLines;
 }

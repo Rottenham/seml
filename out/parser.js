@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
+exports.expandLines = exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
 function error(lineNum, msg, src) {
     return { type: "Error", lineNum, msg, src };
 }
@@ -397,12 +397,13 @@ function parseIntArg(args, argName, argFlag, lineNum, line) {
 }
 exports.parseIntArg = parseIntArg;
 function parse(text) {
-    const out = { setting: {} };
+    const out = { setting: { variables: {} } };
     const args = {};
-    const lines = text.split(/\r?\n/);
-    for (const [i, originalLine] of lines.entries()) {
-        const lineNum = i + 1;
-        const line = originalLine.split("#")[0].trim(); // ignore comments
+    const lines = expandLines(text.split(/\r?\n/));
+    if (isError(lines)) {
+        return lines;
+    }
+    for (const { lineNum, line } of lines) {
         if (line.startsWith("scene:")) {
             const scene = parseScene(out, lineNum, line);
             if (isError(scene)) {
@@ -411,9 +412,7 @@ function parse(text) {
             break;
         }
     }
-    for (const [i, originalLine] of lines.entries()) {
-        const lineNum = i + 1;
-        const line = originalLine.split("#")[0].trim(); // ignore comments
+    for (const { lineNum, line } of lines) {
         if (line.length > 0 && !line.startsWith("scene:")) {
             const symbol = line.split(" ")[0];
             const upperCasedSymbol = symbol.toUpperCase();
@@ -447,6 +446,7 @@ function parse(text) {
             }
         }
     }
+    delete out.setting.variables;
     return { out, args };
 }
 exports.parse = parse;
@@ -473,4 +473,47 @@ function strictParseFloat(str) {
     }
     return parseFloat(str);
 }
+function expandLines(lines) {
+    const originalLines = lines.map((line, lineNum) => ({ lineNum: lineNum + 1, line: line.split("#")[0].trim() }));
+    const expandedLines = [];
+    const populateLineWithWave = (line, waveNum) => {
+        if (line.startsWith("w")) {
+            return `w${waveNum} ${line.split(" ").slice(1).join(" ")}`;
+        }
+        else {
+            return line;
+        }
+    };
+    for (let cur = 0; cur < originalLines.length; cur++) {
+        let { lineNum, line } = originalLines[cur];
+        const symbol = line.split(" ")[0];
+        if (!(symbol.startsWith("w") && symbol.includes("~"))) {
+            expandedLines.push({ lineNum, line });
+        }
+        else {
+            const startWave = strictParseInt(symbol.slice(1, symbol.indexOf("~")));
+            const endWave = strictParseInt(symbol.slice(symbol.indexOf("~") + 1));
+            if (isNaN(startWave) || isNaN(endWave)) {
+                return error(lineNum, "波数应为正整数", symbol);
+            }
+            if (startWave > endWave) {
+                return error(lineNum, "起始波数应大于终止波数", symbol);
+            }
+            let nextCur = cur;
+            while (nextCur + 1 < originalLines.length
+                && !originalLines[nextCur + 1].line.startsWith("w")) {
+                nextCur++;
+            }
+            for (let waveNum = startWave; waveNum <= endWave; waveNum++) {
+                for (let i = cur; i <= nextCur; i++) {
+                    const { lineNum, line } = originalLines[i];
+                    expandedLines.push({ lineNum, line: populateLineWithWave(line, waveNum) });
+                }
+            }
+            cur = nextCur;
+        }
+    }
+    return expandedLines;
+}
+exports.expandLines = expandLines;
 //# sourceMappingURL=parser.js.map

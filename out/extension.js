@@ -5,10 +5,10 @@ const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
 const parser_1 = require("./parser");
-const { execFile } = require('child_process');
+const child_process_1 = require("child_process");
 function runBinary(filename, args, jsonFilePath) {
     const binaryPath = path.join(__dirname, "bin", filename);
-    execFile(binaryPath, args, (err, stdout, stderr) => {
+    (0, child_process_1.execFile)(binaryPath, args, (err, stdout, stderr) => {
         if (err) {
             vscode.window.showErrorMessage(`出错: ${err}`);
             return;
@@ -56,23 +56,17 @@ function activate(context) {
             return;
         }
         const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiiledJson;
-        const parsedOutput = (0, parser_1.parse)(editor.document.getText());
-        if ((0, parser_1.isError)(parsedOutput)) {
-            const { lineNum, msg, src } = parsedOutput;
-            vscode.window.showErrorMessage(`[第${lineNum}行] ${msg}: ${src}`);
-            return;
-        }
         const destDirName = path.join(dirName, "dest");
         if (!fs.existsSync(destDirName)) {
             fs.mkdirSync(destDirName);
         }
-        const outputFileArg = path.join(destDirName, baseName + "_smash");
+        const outputFile = path.join(destDirName, baseName + "_smash");
         fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
             if (err) {
                 vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
                 return;
             }
-            runBinary('smash_test.exe', [...Object.values(args).flatMap(x => x), "-f", jsonFilePath, "-o", outputFileArg], jsonFilePath);
+            runBinary('smash_test.exe', [...Object.values(args).flatMap(x => x), "-f", jsonFilePath, "-o", outputFile], jsonFilePath);
         });
     });
     context.subscriptions.push(disposable);
@@ -81,11 +75,11 @@ function activate(context) {
         if (editor === undefined) {
             return;
         }
-        const compiiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
-        if (compiiledJson === undefined) {
+        const compiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
+        if (compiledJson === undefined) {
             return;
         }
-        const { jsonFilePath, jsonOutput } = compiiledJson;
+        const { jsonFilePath, jsonOutput } = compiledJson;
         fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
             if (err) {
                 vscode.window.showErrorMessage(`JSON 保存失败: ${err.message}`);
