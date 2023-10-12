@@ -7,7 +7,7 @@
         },
         {
             "name": "",
-            "match": "^(C|P|B|D|PP|DD|c|p|b|d|pp|dd)\\s+(\\+?\\d+)?",
+            "match": "^(C|C_POS|C_NUM|P|B|D|PP|DD|p|b|d|pp|dd)\\s+(\\+?\\d+)?",
             "captures": {
                 "1": {
                     "name": "entity.other.attribute-name.seml"

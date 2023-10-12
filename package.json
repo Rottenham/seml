@@ -38,7 +38,11 @@
     "commands": [
       {
         "command": "seml.testSmash",
-        "title": "测试砸率"
+        "title": "Seml: 测试砸率"
+      },
+      {
+        "command": "seml.compileToJson",
+        "title": "Seml: 导出为 JSON"
       }
     ]
   },

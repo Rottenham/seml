@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseSmash = exports.parseArg = exports.parseProtect = exports.parseScene = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
+exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
 function error(lineNum, msg, src) {
     return { type: "Error", lineNum, msg, src };
 }
@@ -94,37 +94,26 @@ function parseTime(lineNum, timeToken, prevTime) {
     }
 }
 ;
-function parseRows(lineNum, rowsToken, expectedNum, suffix, description) {
-    const rows = [];
-    if (expectedNum !== null && expectedNum !== rowsToken.length) {
-        return error(lineNum, `请提供 ${expectedNum} 个${description}`, rowsToken);
-    }
-    let hasSuffix = false;
-    for (const [i, rowToken] of [...rowsToken].entries()) {
-        if (hasSuffix) {
-            hasSuffix = false;
-        }
-        else {
-            const row = strictParseInt(rowToken);
-            if (isNaN(row) || row < 1 || row > 6) {
-                return error(lineNum, `${description}应为 1~6 内的整数`, rowToken);
-            }
-            const nextChar = rowsToken[i + 1];
-            if (nextChar !== undefined && suffix !== null && nextChar === suffix) {
-                hasSuffix = true;
-            }
-            rows.push({ row, hasSuffix });
-        }
-    }
-    rows.sort((a, b) => a.row - b.row);
-    return rows;
-}
-;
 function parseCob(out, lineNum, line, cobNum) {
     const currWave = lastWave(out)[1];
     if (currWave === undefined) {
         return error(lineNum, "请先设定波次", line);
     }
+    const parseRows = (rowsToken) => {
+        if (rowsToken.length !== cobNum) {
+            return error(lineNum, `请提供 ${cobNum} 个落点行`, rowsToken);
+        }
+        const rows = [];
+        for (const rowToken of rowsToken) {
+            const row = strictParseInt(rowToken);
+            if (isNaN(row) || row < 1 || row > getMaxRows(out.setting.scene)) {
+                return error(lineNum, `落点行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
+            }
+            rows.push(row);
+        }
+        rows.sort();
+        return rows;
+    };
     const parseCol = (colToken) => {
         const col = strictParseFloat(colToken);
         if (isNaN(col) || col < 0.0 || col > 10.0) {
@@ -147,7 +136,7 @@ function parseCob(out, lineNum, line, cobNum) {
     if (isError(time)) {
         return time;
     }
-    const rows = parseRows(lineNum, rowsToken, cobNum, null, "落点行");
+    const rows = parseRows(rowsToken);
     if (isError(rows)) {
         return rows;
     }
@@ -159,7 +148,7 @@ function parseCob(out, lineNum, line, cobNum) {
         op: "Cob",
         symbol,
         time,
-        positions: rows.map(row => ({ row: row.row, col: col }))
+        positions: rows.map(row => ({ row, col }))
     });
     return null;
 }
@@ -201,6 +190,37 @@ function parseFodder(out, lineNum, line) {
             return [cardTime, shovelTime];
         }
     };
+    const parseRows = (rowsToken) => {
+        const rows = [];
+        let skip = false;
+        for (const [i, rowToken] of [...rowsToken].entries()) {
+            if (skip) {
+                skip = false;
+            }
+            else {
+                const row = strictParseInt(rowToken);
+                if (isNaN(row) || row < 1 || row > getMaxRows(out.setting.scene)) {
+                    return error(lineNum, `用垫行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
+                }
+                let card = "Normal";
+                const nextChar = rowsToken[i + 1];
+                ;
+                if (nextChar !== undefined) {
+                    if (nextChar === `'`) {
+                        card = "Puff";
+                        skip = true;
+                    }
+                    else if (nextChar === `"`) {
+                        card = "Pot";
+                        skip = true;
+                    }
+                }
+                rows.push({ row, card });
+            }
+        }
+        rows.sort((a, b) => a.row - b.row);
+        return rows;
+    };
     const parseCol = (colToken) => {
         const col = strictParseInt(colToken);
         if (isNaN(col) || col < 1 || col > 9) {
@@ -208,10 +228,7 @@ function parseFodder(out, lineNum, line) {
         }
         return col;
     };
-    const parseFodderArgs = (fodderArgTokens, cardNum) => {
-        if (fodderArgTokens.length === 0) {
-            return null;
-        }
+    const parseFodderArgs = (fodderArgTokens, cardNum, allowOmitChoose) => {
         const fodderArgs = {};
         for (const fodderArgToken of fodderArgTokens) {
             if (!fodderArgToken.includes(":")) {
@@ -253,10 +270,10 @@ function parseFodder(out, lineNum, line) {
                 return error(lineNum, "未知参数", key);
             }
         }
-        if (fodderArgs.choose === undefined) {
+        if (!allowOmitChoose && fodderArgs.choose === undefined) {
             return error(lineNum, "必须提供 choose 的值", "");
         }
-        return { choose: fodderArgs.choose, waves: fodderArgs.waves ?? [] };
+        return { choose: fodderArgs.choose ?? cardNum, waves: fodderArgs.waves ?? [] };
     };
     const tokens = line.split(" ");
     const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3], fodderArgTokens = tokens.slice(4);
@@ -273,7 +290,7 @@ function parseFodder(out, lineNum, line) {
     if (isError(times)) {
         return times;
     }
-    const rows = parseRows(lineNum, rowsToken, null, "'", "用垫行");
+    const rows = parseRows(rowsToken);
     if (isError(rows)) {
         return rows;
     }
@@ -281,26 +298,29 @@ function parseFodder(out, lineNum, line) {
     if (isError(col)) {
         return col;
     }
-    const fodderArgs = parseFodderArgs(fodderArgTokens, rows.length);
-    if (isError(fodderArgs)) {
-        return fodderArgs;
-    }
-    const positions = rows.map(({ row, hasSuffix }) => ({ type: hasSuffix ? "Puff" : "Normal", row, col }));
-    if (fodderArgs === null) {
+    const cards = rows.map(({ card }) => card);
+    const positions = rows.map(({ row }) => ({ row, col }));
+    if (symbol === "C") {
         currWave.actions.push({
             op: "FixedFodder",
             symbol,
             time: times[0],
             shovelTime: times[1] ?? undefined,
+            cards,
             positions
         });
     }
     else {
+        const fodderArgs = parseFodderArgs(fodderArgTokens, rows.length, symbol === "C_NUM");
+        if (isError(fodderArgs)) {
+            return fodderArgs;
+        }
         currWave.actions.push({
             op: "SmartFodder",
             symbol,
             time: times[0],
             shovelTime: times[1] ?? undefined,
+            cards,
             positions,
             choose: fodderArgs.choose,
             waves: fodderArgs.waves
@@ -363,7 +383,7 @@ function parseProtect(out, lineNum, line) {
     return null;
 }
 exports.parseProtect = parseProtect;
-function parseArg(args, argName, argFlag, lineNum, line) {
+function parseIntArg(args, argName, argFlag, lineNum, line) {
     if (argName in args) {
         return error(lineNum, "参数重复", argName);
     }
@@ -375,8 +395,8 @@ function parseArg(args, argName, argFlag, lineNum, line) {
     args[argName] = [argFlag, parsedValue.toString()];
     return null;
 }
-exports.parseArg = parseArg;
-function parseSmash(text) {
+exports.parseIntArg = parseIntArg;
+function parse(text) {
     const out = { setting: {} };
     const args = {};
     const lines = text.split(/\r?\n/);
@@ -402,10 +422,10 @@ function parseSmash(text) {
                 parseResult = parseProtect(out, lineNum, line);
             }
             else if (symbol.startsWith("repeat:")) {
-                parseResult = parseArg(args, "repeat", "-r", lineNum, line);
+                parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
             }
             else if (symbol.startsWith("thread:")) {
-                parseResult = parseArg(args, "thread", "-t", lineNum, line);
+                parseResult = parseIntArg(args, "thread", "-t", lineNum, line);
             }
             else if (upperCasedSymbol.startsWith("W")) {
                 parseResult = parseWave(out, lineNum, line);
@@ -416,7 +436,7 @@ function parseSmash(text) {
             else if (["BB", "PP", "DD"].includes(upperCasedSymbol)) {
                 parseResult = parseCob(out, lineNum, line, 2);
             }
-            else if (upperCasedSymbol === "C") {
+            else if (symbol === "C" || symbol === "C_POS" || symbol === "C_NUM") {
                 parseResult = parseFodder(out, lineNum, line);
             }
             else {
@@ -429,7 +449,7 @@ function parseSmash(text) {
     }
     return { out, args };
 }
-exports.parseSmash = parseSmash;
+exports.parse = parse;
 function lastWave(out) {
     let lastKey = Number(Object.keys(out)[Object.keys(out).length - 2]);
     if (isNaN(lastKey)) {
