@@ -391,7 +391,6 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 		return col;
 	}
 
-
 	const cards: Card[] = rows.map(({ card }) => card);
 	const positions: Position[] = rows.map(({ row }) => ({ row, col }));
 
@@ -424,7 +423,6 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 	return null;
 }
 
-
 export function parseSet(out: ParserOutput, lineNum: number, line: string): null | Error {
 	const tokens = line.split(" ");
 
@@ -445,14 +443,17 @@ export function parseSet(out: ParserOutput, lineNum: number, line: string): null
 	if (!(/^[0-9+\-*/()]+$/.test(expr))) {
 		return error(lineNum, "表达式只能包含数字、运算符与括号", expr);
 	}
+	const val = Number(eval(expr));
+	if (isNaN(val)) {
+		return error(lineNum, "表达式无效", expr);
+	}
 
 	if (out.setting.variables === undefined) {
 		out.setting.variables = {};
 	}
-	out.setting.variables[varName] = eval(expr);
+	out.setting.variables[varName] = val;
 	return null;
 }
-
 
 export function parseScene(out: ParserOutput, lineNum: number, line: string): null | Error {
 	if ("scene" in out.setting) {

@@ -337,10 +337,14 @@ function parseSet(out, lineNum, line) {
     if (!(/^[0-9+\-*/()]+$/.test(expr))) {
         return (0, error_1.error)(lineNum, "表达式只能包含数字、运算符与括号", expr);
     }
+    const val = Number(eval(expr));
+    if (isNaN(val)) {
+        return (0, error_1.error)(lineNum, "表达式无效", expr);
+    }
     if (out.setting.variables === undefined) {
         out.setting.variables = {};
     }
-    out.setting.variables[varName] = eval(expr);
+    out.setting.variables[varName] = val;
     return null;
 }
 exports.parseSet = parseSet;
