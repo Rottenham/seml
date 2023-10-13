@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.expandLines = exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
+exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseFodder = exports.parseCob = exports.parseWave = exports.isError = exports.error = void 0;
 function error(lineNum, msg, src) {
     return { type: "Error", lineNum, msg, src };
 }
@@ -329,6 +329,31 @@ function parseFodder(out, lineNum, line) {
     return null;
 }
 exports.parseFodder = parseFodder;
+function parseSet(out, lineNum, line) {
+    const tokens = line.split(" ");
+    if (tokens.length < 3) {
+        return error(lineNum, "请提供变量名与表达式", line);
+    }
+    const varName = tokens[1], expr = tokens[2];
+    if (varName.length === 0) {
+        return error(lineNum, "变量名不可为空", line);
+    }
+    if (/^\d+$/.test(varName)) {
+        return error(lineNum, "变量名不可为纯数字", varName);
+    }
+    if (expr.length === 0) {
+        return error(lineNum, "表达式不可为空", line);
+    }
+    if (!(/^[0-9+\-*/()]+$/.test(expr))) {
+        return error(lineNum, "表达式只能包含数字、运算符与括号", expr);
+    }
+    if (out.setting.variables === undefined) {
+        out.setting.variables = {};
+    }
+    out.setting.variables[varName] = eval(expr);
+    return null;
+}
+exports.parseSet = parseSet;
 function parseScene(out, lineNum, line) {
     if ("scene" in out.setting) {
         return error(lineNum, "参数重复", "scene");
@@ -397,7 +422,7 @@ function parseIntArg(args, argName, argFlag, lineNum, line) {
 }
 exports.parseIntArg = parseIntArg;
 function parse(text) {
-    const out = { setting: { variables: {} } };
+    const out = { setting: {} };
     const args = {};
     const lines = expandLines(text.split(/\r?\n/));
     if (isError(lines)) {
@@ -412,11 +437,13 @@ function parse(text) {
             break;
         }
     }
-    for (const { lineNum, line } of lines) {
+    for (let { lineNum, line } of lines) {
         if (line.length > 0 && !line.startsWith("scene:")) {
+            line = replaceVariables(out, line);
             const symbol = line.split(" ")[0];
             const upperCasedSymbol = symbol.toUpperCase();
             let parseResult = null;
+            console.log({ line, symbol });
             if (symbol.startsWith("protect:")) {
                 parseResult = parseProtect(out, lineNum, line);
             }
@@ -437,6 +464,9 @@ function parse(text) {
             }
             else if (symbol === "C" || symbol === "C_POS" || symbol === "C_NUM") {
                 parseResult = parseFodder(out, lineNum, line);
+            }
+            else if (symbol === "SET") {
+                parseResult = parseSet(out, lineNum, line);
             }
             else {
                 parseResult = error(lineNum, "未知符号", symbol);
@@ -515,5 +545,17 @@ function expandLines(lines) {
     }
     return expandedLines;
 }
-exports.expandLines = expandLines;
+function replaceVariables(out, line) {
+    let prefix = "";
+    if (line.startsWith("SET")) {
+        prefix = line.split(" ").slice(0, 2).join(" ") + " ";
+        line = line.split(" ").slice(2).join(" ");
+    }
+    if (out.setting.variables !== undefined) {
+        for (const [varName, varValue] of Object.entries(out.setting.variables)) {
+            line = line.replace(varName, varValue.toString());
+        }
+    }
+    return prefix + line;
+}
 //# sourceMappingURL=parser.js.map

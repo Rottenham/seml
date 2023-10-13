@@ -19,7 +19,7 @@
         },
         {
             "name": "keyword.seml",
-            "match": "^w[1-9][\\s0-9]*(?=$|#)"
+            "match": "^w[1-9][\\s~0-9]*(?=$|#)"
         },
         {
             "name": "keyword.seml",

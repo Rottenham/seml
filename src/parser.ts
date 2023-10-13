@@ -1,5 +1,3 @@
-import { start } from "repl";
-
 export type Error = { type: "Error", lineNum: number, msg: string, src: string };
 
 export function error(lineNum: number, msg: string, src: string): Error {
@@ -437,6 +435,36 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 	return null;
 }
 
+
+export function parseSet(out: ParserOutput, lineNum: number, line: string): null | Error {
+	const tokens = line.split(" ");
+
+	if (tokens.length < 3) {
+		return error(lineNum, "请提供变量名与表达式", line);
+	}
+	const varName = tokens[1]!, expr = tokens[2]!;
+	if (varName.length === 0) {
+		return error(lineNum, "变量名不可为空", line);
+	}
+	if (/^\d+$/.test(varName)) {
+		return error(lineNum, "变量名不可为纯数字", varName);
+	}
+
+	if (expr.length === 0) {
+		return error(lineNum, "表达式不可为空", line);
+	}
+	if (!(/^[0-9+\-*/()]+$/.test(expr))) {
+		return error(lineNum, "表达式只能包含数字、运算符与括号", expr);
+	}
+
+	if (out.setting.variables === undefined) {
+		out.setting.variables = {};
+	}
+	out.setting.variables[varName] = eval(expr);
+	return null;
+}
+
+
 export function parseScene(out: ParserOutput, lineNum: number, line: string): null | Error {
 	if ("scene" in out.setting) {
 		return error(lineNum, "参数重复", "scene");
@@ -514,7 +542,7 @@ export function parseIntArg(args: { [key: string]: string[] }, argName: string, 
 }
 
 export function parse(text: string) {
-	const out: ParserOutput = { setting: { variables: {} } };
+	const out: ParserOutput = { setting: {} };
 	const args: { [key: string]: string[] } = {};
 
 	const lines = expandLines(text.split(/\r?\n/));
@@ -532,12 +560,14 @@ export function parse(text: string) {
 		}
 	}
 
-	for (const { lineNum, line } of lines) {
+	for (let { lineNum, line } of lines) {
 		if (line.length > 0 && !line.startsWith("scene:")) {
+			line = replaceVariables(out, line);
 			const symbol = line.split(" ")[0]!;
 			const upperCasedSymbol = symbol.toUpperCase();
 
 			let parseResult = null;
+			console.log({ line, symbol });
 			if (symbol.startsWith("protect:")) {
 				parseResult = parseProtect(out, lineNum, line);
 			} else if (symbol.startsWith("repeat:")) {
@@ -552,6 +582,8 @@ export function parse(text: string) {
 				parseResult = parseCob(out, lineNum, line, 2);
 			} else if (symbol === "C" || symbol === "C_POS" || symbol === "C_NUM") {
 				parseResult = parseFodder(out, lineNum, line);
+			} else if (symbol === "SET") {
+				parseResult = parseSet(out, lineNum, line);
 			} else {
 				parseResult = error(lineNum, "未知符号", symbol);
 			}
@@ -595,7 +627,7 @@ type Line = {
 	line: string;
 };
 
-export function expandLines(lines: string[]): Line[] | Error {
+function expandLines(lines: string[]): Line[] | Error {
 	const originalLines: Line[] = lines.map((line, lineNum) =>
 		({ lineNum: lineNum + 1, line: line.split("#")[0]!.trim() }));
 	const expandedLines: Line[] = [];
@@ -641,4 +673,19 @@ export function expandLines(lines: string[]): Line[] | Error {
 		}
 	}
 	return expandedLines;
+}
+
+function replaceVariables(out: ParserOutput, line: string) {
+	let prefix = "";
+	if (line.startsWith("SET")) {
+		prefix = line.split(" ").slice(0, 2).join(" ") + " ";
+		line = line.split(" ").slice(2).join(" ");
+	}
+
+	if (out.setting.variables !== undefined) {
+		for (const [varName, varValue] of Object.entries(out.setting.variables)) {
+			line = line.replace(varName, varValue.toString());
+		}
+	}
+	return prefix + line;
 }
