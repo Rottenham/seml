@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { parse, isError } from './parser';
+import { isError } from './error';
+import { parse } from './parser';
 import { execFile, ExecFileException } from 'child_process';
 
 function runBinary(filename: string, args: string[], jsonFilePath: string) {

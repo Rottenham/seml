@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+import { error } from "../../error";
 import {
-    ParserOutput, error, parseCob, parseWave, parseFodder, parseScene, parseProtect, parse,
+    ParserOutput, parseCob, parseWave, parseFodder, parseScene, parseProtect, parse,
     parseIntArg
 } from '../../parser';
 import { expect } from 'chai';
@@ -9,7 +10,7 @@ describe("parseCob", () => {
     let out: ParserOutput;
 
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {  } };
     });
 
     it("should return an error if no wave is set", () => {
@@ -154,11 +155,11 @@ describe('parseWave', () => {
     let out: ParserOutput;
 
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {  } };
     });
 
     it('should parse valid wave', () => {
-        expect(parseWave(out, 1, 'W1 100 200 300 601')).equal(null);
+        expect(parseWave(out, 1, 'w1 100 200 300 601')).equal(null);
         expect(out[1]).to.deep.equal({
             iceTimes: [100, 200, 300],
             waveLength: 601,
@@ -167,39 +168,39 @@ describe('parseWave', () => {
     });
 
     it('should return an error for invalid wave number', () => {
-        expect(parseWave(out, 1, 'W0 100 200 300 601',))
-            .to.deep.equal(error(1, '波数应为 1~9 内的整数', 'W0'));
+        expect(parseWave(out, 1, 'w0 100 200 300 601',))
+            .to.deep.equal(error(1, '波数应为 1~9 内的整数', 'w0'));
     });
 
     it('should return an error for duplicate wave number', () => {
         out[1] = { iceTimes: [], waveLength: 601, actions: [] };
-        expect(parseWave(out, 1, 'W1 100 200 300 601',))
-            .to.deep.equal(error(1, '波数重复', 'W1'));
+        expect(parseWave(out, 1, 'w1 100 200 300 601',))
+            .to.deep.equal(error(1, '波数重复', 'w1'));
     });
 
     it('should return an error for missing wave length', () => {
-        expect(parseWave(out, 1, 'W1',))
-            .to.deep.equal(error(1, '请提供波长', 'W1'));
+        expect(parseWave(out, 1, 'w1',))
+            .to.deep.equal(error(1, '请提供波长', 'w1'));
     });
 
     it('should return an error for invalid wave length', () => {
-        expect(parseWave(out, 1, 'W1 100 200 300 0',))
+        expect(parseWave(out, 1, 'w1 100 200 300 0',))
             .to.deep.equal(error(1, '波长应为 >= 601 的整数', '0'));
     });
 
     it('should return an error for invalid ice time', () => {
-        expect(parseWave(out, 1, 'W1 100 a 300 601',))
+        expect(parseWave(out, 1, 'w1 100 a 300 601',))
             .to.deep.equal(error(1, '用冰时机应为正整数', 'a'));
     });
 
     it('should return an error for wave length less than last ice time', () => {
-        expect(parseWave(out, 1, 'W1 602 601',))
-            .to.deep.equal(error(1, '波长应 >= 最后一次用冰时机', 'W1 602 601'));
+        expect(parseWave(out, 1, 'w1 602 601',))
+            .to.deep.equal(error(1, '波长应 >= 最后一次用冰时机', 'w1 602 601'));
     });
 
     it('should return an error for missing previous wave', () => {
-        expect(parseWave(out, 1, 'W2 601',))
-            .to.deep.equal(error(1, '请先设定第 1 波', 'W2'));
+        expect(parseWave(out, 1, 'w2 601',))
+            .to.deep.equal(error(1, '请先设定第 1 波', 'w2'));
     });
 });
 
@@ -504,7 +505,7 @@ describe("parseScene", () => {
     let out: ParserOutput;
 
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {  } };
     });
 
     it("should return an error scene is unknown", () => {
@@ -652,7 +653,7 @@ describe("parseSmash", () => {
     });
 
     it("should parse a single wave with a cob and a fixed fodder", () => {
-        expect(parse("\nW1 601\nP 300 2 9\nC +134+134 5 9\n"))
+        expect(parse("\nw1 601\nP 300 2 9\nC +134+134 5 9\n"))
             .to.have.property("out").that.deep.equal({
                 setting: {},
                 1: {
@@ -725,7 +726,7 @@ describe("parseSmash", () => {
     });
 
     it("should parse multiple waves with metadata", () => {
-        expect(parse("thread:1\nrepeat:10\nW1 601\nPP 300 25 9\nW2 1 1250\nC_POS 400+134 3 4 choose:1 waves:12\n"))
+        expect(parse("thread:1\nrepeat:10\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 3 4 choose:1 waves:12\n"))
             .to.deep.equal({
                 out: {
                     setting: {},
@@ -781,7 +782,7 @@ describe("parseSmash", () => {
     });
 
     it("should ignore comments", () => {
-        expect(parse("W1 1 601 # this is a comment\nP 300 2 9\n"))
+        expect(parse("w1 1 601 # this is a comment\nP 300 2 9\n"))
             .to.have.property("out").that.deep.equal({
                 setting: {},
                 1: {
@@ -805,7 +806,7 @@ describe("parseSmash", () => {
     });
 
     it("should return an error for an unknown symbol", () => {
-        expect(parse("W1 601\nX\n")).to.deep.equal({
+        expect(parse("w1 601\nX\n")).to.deep.equal({
             type: "Error",
             lineNum: 2,
             msg: "未知符号",

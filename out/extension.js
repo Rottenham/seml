@@ -4,6 +4,7 @@ exports.deactivate = exports.activate = void 0;
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
+const error_1 = require("./error");
 const parser_1 = require("./parser");
 const child_process_1 = require("child_process");
 function runBinary(filename, args, jsonFilePath) {
@@ -28,7 +29,7 @@ function runBinary(filename, args, jsonFilePath) {
 }
 function compileToJson(src, fsPath) {
     const parsedOutput = (0, parser_1.parse)(src);
-    if ((0, parser_1.isError)(parsedOutput)) {
+    if ((0, error_1.isError)(parsedOutput)) {
         const { lineNum, msg, src } = parsedOutput;
         vscode.window.showErrorMessage(`[第${lineNum}行] ${msg}: ${src}`);
         return;
