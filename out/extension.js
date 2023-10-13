@@ -47,7 +47,28 @@ function compileToJson(src, fsPath) {
     return { dirName, baseName, jsonFilePath, jsonOutput, args };
 }
 function activate(context) {
-    let disposable = vscode.commands.registerCommand('seml.testSmash', () => {
+    let compileToJsonCmd = vscode.commands.registerCommand('seml.compileToJson', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor === undefined) {
+            return;
+        }
+        const compiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
+        if (compiledJson === undefined) {
+            return;
+        }
+        const { jsonFilePath, jsonOutput } = compiledJson;
+        fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
+            if (err) {
+                vscode.window.showErrorMessage(`JSON 保存失败: ${err.message}`);
+                return;
+            }
+            vscode.workspace.openTextDocument(jsonFilePath).then(doc => {
+                vscode.window.showTextDocument(doc);
+            });
+        });
+    });
+    context.subscriptions.push(compileToJsonCmd);
+    let testSmashCmd = vscode.commands.registerCommand('seml.testSmash', () => {
         const editor = vscode.window.activeTextEditor;
         if (editor === undefined) {
             return;
@@ -70,28 +91,7 @@ function activate(context) {
             runBinary('smash_test.exe', [...Object.values(args).flatMap(x => x), "-f", jsonFilePath, "-o", outputFile], jsonFilePath);
         });
     });
-    context.subscriptions.push(disposable);
-    disposable = vscode.commands.registerCommand('seml.compileToJson', () => {
-        const editor = vscode.window.activeTextEditor;
-        if (editor === undefined) {
-            return;
-        }
-        const compiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
-        if (compiledJson === undefined) {
-            return;
-        }
-        const { jsonFilePath, jsonOutput } = compiledJson;
-        fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
-            if (err) {
-                vscode.window.showErrorMessage(`JSON 保存失败: ${err.message}`);
-                return;
-            }
-            vscode.workspace.openTextDocument(jsonFilePath).then(doc => {
-                vscode.window.showTextDocument(doc);
-            });
-        });
-    });
-    context.subscriptions.push(disposable);
+    context.subscriptions.push(testSmashCmd);
 }
 exports.activate = activate;
 function deactivate() { }

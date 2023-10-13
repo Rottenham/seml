@@ -57,7 +57,33 @@ function compileToJson(src: string, fsPath: string)
 
 export function activate(context: vscode.ExtensionContext) {
 
-	let disposable = vscode.commands.registerCommand('seml.testSmash', () => {
+	let compileToJsonCmd = vscode.commands.registerCommand('seml.compileToJson', () => {
+		const editor = vscode.window.activeTextEditor;
+		if (editor === undefined) {
+			return;
+		}
+
+		const compiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
+		if (compiledJson === undefined) {
+			return;
+		}
+
+		const { jsonFilePath, jsonOutput } = compiledJson;
+		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
+			if (err) {
+				vscode.window.showErrorMessage(`JSON 保存失败: ${err.message}`);
+				return;
+			}
+
+			vscode.workspace.openTextDocument(jsonFilePath).then(doc => {
+				vscode.window.showTextDocument(doc);
+			});
+		});
+	});
+
+	context.subscriptions.push(compileToJsonCmd);
+
+	let testSmashCmd = vscode.commands.registerCommand('seml.testSmash', () => {
 		const editor = vscode.window.activeTextEditor;
 		if (editor === undefined) {
 			return;
@@ -89,32 +115,8 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
-	context.subscriptions.push(disposable);
+	context.subscriptions.push(testSmashCmd);
 
-	disposable = vscode.commands.registerCommand('seml.compileToJson', () => {
-		const editor = vscode.window.activeTextEditor;
-		if (editor === undefined) {
-			return;
-		}
-
-		const compiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
-		if (compiledJson === undefined) {
-			return;
-		}
-
-		const { jsonFilePath, jsonOutput } = compiledJson;
-		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
-			if (err) {
-				vscode.window.showErrorMessage(`JSON 保存失败: ${err.message}`);
-				return;
-			}
-
-			vscode.workspace.openTextDocument(jsonFilePath).then(doc => {
-				vscode.window.showTextDocument(doc);
-			});
-		});
-	});
-	context.subscriptions.push(disposable);
 }
 
 export function deactivate() { }
