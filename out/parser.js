@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
+exports.replaceVariables = exports.expandLines = exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseJalapeno = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
 const error_1 = require("./error");
 const string_1 = require("./string");
 function getMaxRows(scene) {
@@ -146,40 +146,49 @@ function parseCob(out, lineNum, line, cobNum) {
     return null;
 }
 exports.parseCob = parseCob;
+function parseCardAndShovelTime(lineNum, timesToken, currWave) {
+    let cardTimeToken;
+    let shovelTimeToken;
+    const delimIndex = Math.max(timesToken.lastIndexOf("+"), timesToken.lastIndexOf("~"));
+    if (delimIndex <= 0) { // if starts with "+" (delimIndex is 0), still ignore it
+        cardTimeToken = timesToken;
+    }
+    else {
+        cardTimeToken = timesToken.slice(0, delimIndex);
+        shovelTimeToken = (0, string_1.chopPrefix)(timesToken.slice(delimIndex), "~")[0];
+    }
+    const cardTime = parseTime(lineNum, cardTimeToken, currWave.actions.slice(-1)[0]?.time);
+    if ((0, error_1.isError)(cardTime)) {
+        return cardTime;
+    }
+    if (shovelTimeToken === undefined) {
+        return [cardTime, null];
+    }
+    else {
+        const shovelTime = parseTime(lineNum, shovelTimeToken, cardTime);
+        if ((0, error_1.isError)(shovelTime)) {
+            return shovelTime;
+        }
+        if (shovelTime < cardTime) {
+            return (0, error_1.error)(lineNum, "铲除时机不可早于用垫时机", shovelTimeToken);
+        }
+        return [cardTime, shovelTime];
+    }
+}
+;
+function parseCardCol(lineNum, colToken, desc) {
+    const col = (0, string_1.parseNatural)(colToken);
+    if (col === null || col < 1 || col > 9) {
+        return (0, error_1.error)(lineNum, `用${desc}列应为 1~9 内的整数`, colToken);
+    }
+    return col;
+}
+;
 function parseFodder(out, lineNum, line) {
     const [currWaveNum, currWave] = lastWave(out);
     if (currWaveNum === undefined || currWave === undefined) {
         return (0, error_1.error)(lineNum, "请先设定波次", line);
     }
-    const parseTimes = (timesToken) => {
-        let cardTimeToken;
-        let shovelTimeToken;
-        const delimIndex = Math.max(timesToken.lastIndexOf("+"), timesToken.lastIndexOf("~"));
-        if (delimIndex <= 0) { // if starts with "+" (delimIndex is 0), still ignore it
-            cardTimeToken = timesToken;
-        }
-        else {
-            cardTimeToken = timesToken.slice(0, delimIndex);
-            shovelTimeToken = (0, string_1.chopPrefix)(timesToken.slice(delimIndex), "~")[0];
-        }
-        const cardTime = parseTime(lineNum, cardTimeToken, currWave.actions.slice(-1)[0]?.time);
-        if ((0, error_1.isError)(cardTime)) {
-            return cardTime;
-        }
-        if (shovelTimeToken === undefined) {
-            return [cardTime, null];
-        }
-        else {
-            const shovelTime = parseTime(lineNum, shovelTimeToken, cardTime);
-            if ((0, error_1.isError)(shovelTime)) {
-                return shovelTime;
-            }
-            if (shovelTime < cardTime) {
-                return (0, error_1.error)(lineNum, "铲除时机不可早于用垫时机", shovelTimeToken);
-            }
-            return [cardTime, shovelTime];
-        }
-    };
     const parseRows = (rowsToken) => {
         const rows = [];
         let skip = false;
@@ -210,13 +219,6 @@ function parseFodder(out, lineNum, line) {
         }
         rows.sort((a, b) => a.row - b.row);
         return rows;
-    };
-    const parseCol = (colToken) => {
-        const col = (0, string_1.parseNatural)(colToken);
-        if (col === null || col < 1 || col > 9) {
-            return (0, error_1.error)(lineNum, "用垫列应为 1~9 内的整数", colToken);
-        }
-        return col;
     };
     const parseFodderArgs = (fodderArgTokens, cardNum, mustProvideChoose) => {
         const fodderArgs = {};
@@ -276,15 +278,16 @@ function parseFodder(out, lineNum, line) {
     if (colToken === undefined) {
         return (0, error_1.error)(lineNum, "请提供用垫列", line);
     }
-    const times = parseTimes(timeToken);
+    const times = parseCardAndShovelTime(lineNum, timeToken, currWave);
     if ((0, error_1.isError)(times)) {
         return times;
     }
+    const time = times[0], shovelTime = times[1] ?? undefined;
     const rows = parseRows(rowsToken);
     if ((0, error_1.isError)(rows)) {
         return rows;
     }
-    const col = parseCol(colToken);
+    const col = parseCardCol(lineNum, colToken, "垫");
     if ((0, error_1.isError)(col)) {
         return col;
     }
@@ -294,8 +297,8 @@ function parseFodder(out, lineNum, line) {
         currWave.actions.push({
             op: "FixedFodder",
             symbol,
-            time: times[0],
-            shovelTime: times[1] ?? undefined,
+            time,
+            shovelTime,
             cards,
             positions
         });
@@ -305,20 +308,67 @@ function parseFodder(out, lineNum, line) {
         if ((0, error_1.isError)(fodderArgs)) {
             return fodderArgs;
         }
+        const { choose, waves } = fodderArgs;
         currWave.actions.push({
             op: "SmartFodder",
             symbol,
-            time: times[0],
-            shovelTime: times[1] ?? undefined,
+            time,
+            shovelTime,
             cards,
             positions,
-            choose: fodderArgs.choose,
-            waves: fodderArgs.waves
+            choose,
+            waves,
         });
     }
     return null;
 }
 exports.parseFodder = parseFodder;
+function parseJalapeno(out, lineNum, line) {
+    const currWave = lastWave(out)[1];
+    if (currWave === undefined) {
+        return (0, error_1.error)(lineNum, "请先设定波次", line);
+    }
+    const parseRow = (rowToken) => {
+        const row = (0, string_1.parseNatural)(rowToken);
+        if (row === null || row < 1 || row > getMaxRows(out.setting.scene)) {
+            return (0, error_1.error)(lineNum, `用卡行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
+        }
+        return row;
+    };
+    const tokens = line.split(" ");
+    const symbol = tokens[0], timeToken = tokens[1], rowToken = tokens[2], colToken = tokens[3];
+    if (timeToken === undefined) {
+        return (0, error_1.error)(lineNum, "请提供用卡时机", line);
+    }
+    if (rowToken === undefined) {
+        return (0, error_1.error)(lineNum, "请提供用卡行", line);
+    }
+    if (colToken === undefined) {
+        return (0, error_1.error)(lineNum, "请提供用卡列", line);
+    }
+    const times = parseCardAndShovelTime(lineNum, timeToken, currWave);
+    if ((0, error_1.isError)(times)) {
+        return times;
+    }
+    const time = times[0], shovelTime = times[1] ?? undefined;
+    const row = parseRow(rowToken);
+    if ((0, error_1.isError)(row)) {
+        return row;
+    }
+    const col = parseCardCol(lineNum, colToken, "卡");
+    if ((0, error_1.isError)(col)) {
+        return col;
+    }
+    currWave.actions.push({
+        op: "Jalapeno",
+        symbol,
+        time,
+        shovelTime,
+        position: { row, col }
+    });
+    return null;
+}
+exports.parseJalapeno = parseJalapeno;
 function parseSet(out, lineNum, line) {
     const tokens = line.split(" ");
     if (tokens.length < 3) {
@@ -338,7 +388,7 @@ function parseSet(out, lineNum, line) {
         return (0, error_1.error)(lineNum, "表达式只能包含数字、运算符与括号", expr);
     }
     const val = Number(eval(expr));
-    if (isNaN(val)) {
+    if (!isFinite(val)) {
         return (0, error_1.error)(lineNum, "表达式无效", expr);
     }
     if (out.setting.variables === undefined) {
@@ -348,23 +398,30 @@ function parseSet(out, lineNum, line) {
     return null;
 }
 exports.parseSet = parseSet;
-function parseScene(out, lineNum, line) {
-    if ("scene" in out.setting) {
-        return (0, error_1.error)(lineNum, "参数重复", "scene");
+function parseScene(out, lines) {
+    for (const { lineNum, line } of lines) {
+        if (line.startsWith("scene:")) {
+            if ("scene" in out.setting) {
+                return (0, error_1.error)(lineNum, "参数重复", "scene");
+            }
+            const scene = line.split(":").slice(1).join(":");
+            const upperCasedScene = scene.toUpperCase();
+            if (["DE", "NE"].includes(upperCasedScene)) {
+                out.setting.scene = "NE";
+            }
+            else if (["PE", "FE"].includes(upperCasedScene)) {
+                out.setting.scene = "FE";
+            }
+            else if (["RE", "ME"].includes(upperCasedScene)) {
+                out.setting.scene = "ME";
+            }
+            else {
+                return (0, error_1.error)(lineNum, "未知场地", scene);
+            }
+        }
     }
-    const value = line.split(":").slice(1).join(":");
-    const upperCasedValue = value.toUpperCase();
-    if (["DE", "NE"].includes(upperCasedValue)) {
-        out.setting.scene = "NE";
-    }
-    else if (["PE", "FE"].includes(upperCasedValue)) {
+    if (out.setting.scene === undefined) {
         out.setting.scene = "FE";
-    }
-    else if (["RE", "ME"].includes(upperCasedValue)) {
-        out.setting.scene = "ME";
-    }
-    else {
-        return (0, error_1.error)(lineNum, "未知场地", value);
     }
     return null;
 }
@@ -421,14 +478,9 @@ function parse(text) {
     if ((0, error_1.isError)(lines)) {
         return lines;
     }
-    for (const { lineNum, line } of lines) {
-        if (line.startsWith("scene:")) {
-            const scene = parseScene(out, lineNum, line);
-            if ((0, error_1.isError)(scene)) {
-                return scene;
-            }
-            break;
-        }
+    const parseResult = parseScene(out, lines);
+    if ((0, error_1.isError)(parseResult)) {
+        return parseResult;
     }
     for (let { lineNum, line } of lines) {
         if (line.length > 0 && !line.startsWith("scene:")) {
@@ -456,6 +508,9 @@ function parse(text) {
             else if (symbol === "C" || symbol === "C_POS" || symbol === "C_NUM") {
                 parseResult = parseFodder(out, lineNum, line);
             }
+            else if (symbol === "J") {
+                parseResult = parseJalapeno(out, lineNum, line);
+            }
             else if (symbol === "SET") {
                 parseResult = parseSet(out, lineNum, line);
             }
@@ -472,12 +527,13 @@ function parse(text) {
 }
 exports.parse = parse;
 function lastWave(out) {
-    const largestNumberKey = Math.max(...Object.keys(out).filter(key => !isNaN(Number(key))).map(key => Number(key)));
-    if (largestNumberKey > 0) {
-        return [largestNumberKey, out[largestNumberKey]];
+    const numberKeys = Object.keys(out).map(key => Number(key)).filter(key => !isNaN(key));
+    if (numberKeys.length === 0) {
+        return [undefined, undefined];
     }
     else {
-        return [undefined, undefined];
+        const largestNumberKey = Math.max(...numberKeys);
+        return [largestNumberKey, out[largestNumberKey]];
     }
 }
 function expandLines(lines) {
@@ -522,6 +578,7 @@ function expandLines(lines) {
     }
     return expandedLines;
 }
+exports.expandLines = expandLines;
 function replaceVariables(out, line) {
     if (out.setting.variables === undefined) {
         return line;
@@ -531,9 +588,10 @@ function replaceVariables(out, line) {
         let head = line.split(" ").slice(0, reservedNum).join(" ");
         let tail = line.split(" ").slice(reservedNum).join(" ");
         for (const [varName, varValue] of Object.entries(out.setting.variables)) {
-            tail = tail.replace(varName, varValue.toString());
+            tail = tail.replaceAll(varName, varValue.toString());
         }
         return [head, tail].join(" ").trim();
     }
 }
+exports.replaceVariables = replaceVariables;
 //# sourceMappingURL=parser.js.map

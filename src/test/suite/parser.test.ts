@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { error } from "../../error";
 import {
-    ParserOutput, parseCob, parseWave, parseFodder, parseScene, parseProtect, parse,
-    parseIntArg
+    parse, ParserOutput, parseCob, parseWave, parseFodder, parseJalapeno,
+    parseScene, parseProtect, parseIntArg, parseSet,
+    expandLines, replaceVariables
 } from '../../parser';
 import { expect } from 'chai';
 
@@ -10,7 +11,7 @@ describe("parseCob", () => {
     let out: ParserOutput;
 
     beforeEach(() => {
-        out = { setting: {  } };
+        out = { setting: {} };
     });
 
     it("should return an error if no wave is set", () => {
@@ -155,7 +156,7 @@ describe('parseWave', () => {
     let out: ParserOutput;
 
     beforeEach(() => {
-        out = { setting: {  } };
+        out = { setting: {} };
     });
 
     it('should parse valid wave', () => {
@@ -501,20 +502,177 @@ describe("parseFodder", () => {
     });
 });
 
+describe('parseJalapeno', () => {
+    let out: ParserOutput;
+
+    beforeEach(() => {
+        out = { setting: {} };
+    });
+
+    it('should return an error if no wave is set', () => {
+        expect(parseJalapeno(out, 1, 'J 100 1 1')).to.deep.equal(
+            error(1, '请先设定波次', 'J 100 1 1')
+        );
+    });
+
+    it('should return an error if timeToken is missing', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J')).to.deep.equal(
+            error(1, '请提供用卡时机', 'J')
+        );
+    });
+
+    it('should return an error if rowToken is missing', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J 100')).to.deep.equal(
+            error(1, '请提供用卡行', 'J 100')
+        );
+    });
+
+    it('should return an error if colToken is missing', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J 100 1')).to.deep.equal(
+            error(1, '请提供用卡列', 'J 100 1')
+        );
+    });
+
+    it('should return an error if shovel time is negative', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J 100+-134 1 1')).to.deep.equal(
+            error(1, '时间应为非负整数', '-134')
+        );
+    });
+
+    it('should return an error if row is not a number', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J 100 a 1')).to.deep.equal(
+            error(1, '用卡行应为 1~6 内的整数', 'a')
+        );
+    });
+
+    it('should return an error if row is not within 1-6', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J 100 7 1')).to.deep.equal(
+            error(1, '用卡行应为 1~6 内的整数', '7')
+        );
+    });
+
+    it('should return an error if col is not within 1~9', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J 100 1 0')).to.deep.equal(
+            error(1, '用卡列应为 1~9 内的整数', '0')
+        );
+    });
+
+    it('should add a Jalapeno action to the current wave', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J 100 1 1')).equal(null);
+        expect(out[1]?.actions).to.deep.equal([
+            {
+                op: 'Jalapeno',
+                symbol: 'J',
+                time: 100,
+                shovelTime: undefined,
+                position: { row: 1, col: 1 },
+            },
+        ]);
+    });
+
+    it('should add a delayed Jalapeno action to the current wave', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J 100 1 1')).equal(null);
+        expect(parseJalapeno(out, 2, 'J +134 1 1')).equal(null);
+        expect(out[1]?.actions).to.deep.equal([
+            {
+                op: 'Jalapeno',
+                symbol: 'J',
+                time: 100,
+                shovelTime: undefined,
+                position: { row: 1, col: 1 },
+            },
+            {
+                op: 'Jalapeno',
+                symbol: 'J',
+                time: 100 + 134,
+                shovelTime: undefined,
+                position: { row: 1, col: 1 },
+            },
+        ]);
+    });
+
+    it('should add a Jalapeno action with shovel time to the current wave', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseJalapeno(out, 1, 'J 100~200 1 1')).equal(null);
+        expect(out[1]?.actions).to.deep.equal([
+            {
+                op: 'Jalapeno',
+                symbol: 'J',
+                time: 100,
+                shovelTime: 200,
+                position: { row: 1, col: 1 },
+            },
+        ]);
+    });
+});
+
+describe('parseSet', () => {
+    let out: ParserOutput;
+
+    beforeEach(() => {
+        out = { setting: {} };
+    });
+
+    it('should return an error if variable name is missing', () => {
+        expect(parseSet(out, 1, 'set'))
+            .to.deep.equal(error(1, '请提供变量名与表达式', 'set'));
+    });
+
+    it('should return an error if variable name is empty', () => {
+        expect(parseSet(out, 1, 'set  1+2'))
+            .to.deep.equal(error(1, '变量名不可为空', 'set  1+2'));
+    });
+
+    it('should return an error if variable name is a pure number', () => {
+        expect(parseSet(out, 1, 'set 123 1+2'))
+            .to.deep.equal(error(1, '变量名不可为纯数字', '123'));
+    });
+
+    it('should return an error if expression is missing', () => {
+        expect(parseSet(out, 1, 'set x '))
+            .to.deep.equal(error(1, '表达式不可为空', 'set x '));
+    });
+
+    it('should return an error if expression contains invalid characters', () => {
+        expect(parseSet(out, 1, 'set x 1+2-3*4/5%6'))
+            .to.deep.equal(error(1, '表达式只能包含数字、运算符与括号', '1+2-3*4/5%6'));
+    });
+
+    it('should return an error if expression is invalid', () => {
+        expect(parseSet(out, 1, 'set x 1/0'))
+            .to.deep.equal(error(1, '表达式无效', '1/0'));
+    });
+
+    it('should add a variable to the output', () => {
+        expect(parseSet(out, 1, 'set x 1+2')).to.equal(null);
+        expect(out.setting.variables)
+            .to.deep.equal({ x: 3 });
+    });
+});
+
 describe("parseScene", () => {
     let out: ParserOutput;
 
     beforeEach(() => {
-        out = { setting: {  } };
+        out = { setting: {} };
     });
 
     it("should return an error scene is unknown", () => {
-        expect(parseScene(out, 1, "scene:AQE"))
+        expect(parseScene(out, [{ lineNum: 1, line: "scene:AQE" }]))
             .to.deep.equal(error(1, "未知场地", "AQE"));
     });
 
     it("should parse scene", () => {
-        expect(parseScene(out, 1, "scene:FE")).equal(null);
+        expect(parseScene(out, [{ lineNum: 1, line: "scene:FE" }])).equal(null);
         expect(out).to.deep.equal({
             setting: {
                 scene: "FE"
@@ -523,7 +681,7 @@ describe("parseScene", () => {
     });
 
     it("should parse scene case-insensitively", () => {
-        expect(parseScene(out, 1, "scene:nE")).equal(null);
+        expect(parseScene(out, [{ lineNum: 1, line: "scene:nE" }])).equal(null);
         expect(out).to.deep.equal({
             setting: {
                 scene: "NE"
@@ -532,7 +690,7 @@ describe("parseScene", () => {
     });
 
     it("should parse scene alias", () => {
-        expect(parseScene(out, 1, "scene:RE")).equal(null);
+        expect(parseScene(out, [{ lineNum: 1, line: "scene:RE" }])).equal(null);
         expect(out).to.deep.equal({
             setting: {
                 scene: "ME"
@@ -541,8 +699,8 @@ describe("parseScene", () => {
     });
 
     it("should return an error if setting args are repeated", () => {
-        expect(parseScene(out, 1, "scene:PE")).equal(null);
-        expect(parseScene(out, 2, "scene:DE")).to.deep.equal(error(2, "参数重复", "scene"));
+        expect(parseScene(out, [{ lineNum: 1, line: "scene:PE" }, { lineNum: 2, line: "scene:DE" }]))
+            .to.deep.equal(error(2, "参数重复", "scene"));
     });
 });
 
@@ -551,6 +709,12 @@ describe("parseProtect", () => {
 
     beforeEach(() => {
         out = { setting: {} };
+    });
+
+    it("should return an error if protect is duplicated", () => {
+        expect(parseProtect(out, 1, "protect:17")).to.equal(null);
+        expect(parseProtect(out, 2, "protect:17"))
+            .to.deep.equal(error(2, "参数重复", "protect"));
     });
 
     it("should return an error if there is no value", () => {
@@ -569,8 +733,8 @@ describe("parseProtect", () => {
     });
 
     it("should return an error if cob col is out of bound", () => {
-        expect(parseProtect(out, 1, "protect:19"))
-            .to.deep.equal(error(1, "炮所在列应为 1~8 内的整数", "9"));
+        expect(parseProtect(out, 1, "protect:11"))
+            .to.deep.equal(error(1, "炮所在列应为 2~9 内的整数", "1"));
     });
 
     it("should return an error if normal col is out of bound", () => {
@@ -592,7 +756,7 @@ describe("parseProtect", () => {
                 protect: [{
                     type: "Cob",
                     row: 1,
-                    col: 8,
+                    col: 7,
                 },
                 {
                     type: "Normal",
@@ -605,7 +769,7 @@ describe("parseProtect", () => {
 
 });
 
-describe("parseArgs", () => {
+describe("parseIntArg", () => {
     let args: { [key: string]: string[] };
 
     beforeEach(() => {
@@ -634,11 +798,11 @@ describe("parseArgs", () => {
     });
 });
 
-describe("parseSmash", () => {
+describe("parse", () => {
     it("should return empty object if input is empty", () => {
         expect(parse(""))
             .to.have.property("out").that.deep.equal({
-                setting: {},
+                setting: { scene: "FE" },
             });
     });
 
@@ -655,7 +819,7 @@ describe("parseSmash", () => {
     it("should parse a single wave with a cob and a fixed fodder", () => {
         expect(parse("\nw1 601\nP 300 2 9\nC +134+134 5 9\n"))
             .to.have.property("out").that.deep.equal({
-                setting: {},
+                setting: { scene: "FE" },
                 1: {
                     iceTimes: [],
                     waveLength: 601,
@@ -693,7 +857,7 @@ describe("parseSmash", () => {
     it("should parse a single wave (lowercase) with a smart fodder", () => {
         expect(parse("w1 601\nC_POS 300~500 25 9 choose:1"))
             .to.have.property("out").that.deep.equal({
-                setting: {},
+                setting: { scene: "FE" },
                 1: {
                     iceTimes: [],
                     waveLength: 601,
@@ -729,7 +893,7 @@ describe("parseSmash", () => {
         expect(parse("thread:1\nrepeat:10\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 3 4 choose:1 waves:12\n"))
             .to.deep.equal({
                 out: {
-                    setting: {},
+                    setting: { scene: "FE" },
                     1: {
                         iceTimes: [],
                         waveLength: 601,
@@ -784,7 +948,7 @@ describe("parseSmash", () => {
     it("should ignore comments", () => {
         expect(parse("w1 1 601 # this is a comment\nP 300 2 9\n"))
             .to.have.property("out").that.deep.equal({
-                setting: {},
+                setting: { scene: "FE" },
                 1: {
                     iceTimes: [1],
                     waveLength: 601,
@@ -812,5 +976,85 @@ describe("parseSmash", () => {
             msg: "未知符号",
             src: "X",
         });
+    });
+});
+
+describe('expandLines', () => {
+    it('should expand a single wave line', () => {
+        const input = ['w1 # comment', 'a b c'];
+        expect(expandLines(input))
+            .to.deep.equal([
+                { lineNum: 1, line: "w1" },
+                { lineNum: 2, line: "a b c" },
+            ]);
+    });
+
+    it('should expand multiple wave lines', () => {
+        const input = ['w1~3 # comment', 'a b c', 'd e f', 'g h i'];
+        expect(expandLines(input))
+            .to.deep.equal([
+                { lineNum: 1, line: 'w1' },
+                { lineNum: 2, line: 'a b c' },
+                { lineNum: 3, line: 'd e f' },
+                { lineNum: 4, line: 'g h i' },
+                { lineNum: 1, line: 'w2' },
+                { lineNum: 2, line: 'a b c' },
+                { lineNum: 3, line: 'd e f' },
+                { lineNum: 4, line: 'g h i' },
+                { lineNum: 1, line: 'w3' },
+                { lineNum: 2, line: 'a b c' },
+                { lineNum: 3, line: 'd e f' },
+                { lineNum: 4, line: 'g h i' },
+            ]);
+    });
+
+    it('should handle invalid wave syntax', () => {
+        const input = ['w1~a # comment', 'a b c'];
+        expect(expandLines(input))
+            .to.deep.equal(error(1, '波数应为正整数', 'w1~a'));
+    });
+
+    it('should handle invalid wave range', () => {
+        const input = ['w3~1 # comment', 'a b c'];
+        expect(expandLines(input))
+            .to.deep.equal(error(1, '起始波数应大于终止波数', 'w3~1'));
+    });
+});
+
+describe('replaceVariables', () => {
+    let out: ParserOutput;
+
+    beforeEach(() => {
+        out = { setting: {} };
+    });
+
+    it('should return the original line if variables are not defined', () => {
+        const line = 'SET $a 1';
+        expect(replaceVariables(out, line)).to.equal(line);
+    });
+
+    it('should replace variables with their values', () => {
+        out.setting.variables = { $a: 1, $b: 2 };
+        expect(replaceVariables(out, 'SET $a $b')).to.equal('SET $a 2');
+    });
+
+    it('should not replace variable to be SET', () => {
+        out.setting.variables = { $a: 1 };
+        expect(replaceVariables(out, 'SET $a 1')).to.equal('SET $a 1');
+    });
+
+    it('should replace variables in non-reserved words', () => {
+        out.setting.variables = { $a: 1 };
+        expect(replaceVariables(out, 'P $a 2 9')).to.equal('P 1 2 9');
+    });
+
+    it('should replace variables in the middle of a word', () => {
+        out.setting.variables = { $a: 1 };
+        expect(replaceVariables(out, 'P $a1 2 9')).to.equal('P 11 2 9');
+    });
+
+    it('should replace multiple variables in a line', () => {
+        out.setting.variables = { $a: 1, $b: 2 };
+        expect(replaceVariables(out, 'P $a $b $a')).to.equal('P 1 2 1');
     });
 });

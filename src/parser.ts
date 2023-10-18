@@ -13,6 +13,14 @@ type Cob = {
 	readonly positions: Position[];
 };
 
+type Jalapeno = {
+	readonly op: "Jalapeno";
+	readonly symbol: string;
+	readonly shovelTime?: number;
+	readonly time: number;
+	readonly position: Position;
+};
+
 type Card = "Normal" | "Puff" | "Pot";
 
 type FixedFodder = {
@@ -35,7 +43,7 @@ type SmartFodder = {
 	readonly waves: number[];
 };
 
-type Action = Cob | FixedFodder | SmartFodder;
+type Action = Cob | Jalapeno | FixedFodder | SmartFodder;
 
 type Wave = {
 	readonly iceTimes: number[],
@@ -229,42 +237,53 @@ export function parseCob(out: ParserOutput, lineNum: number, line: string, cobNu
 	return null;
 }
 
+function parseCardAndShovelTime(lineNum: number, timesToken: string, currWave: Wave)
+	: [number, number | null] | Error {
+	let cardTimeToken: string;
+	let shovelTimeToken: string | undefined;
+
+	const delimIndex = Math.max(timesToken.lastIndexOf("+"), timesToken.lastIndexOf("~"));
+	if (delimIndex <= 0) {  // if starts with "+" (delimIndex is 0), still ignore it
+		cardTimeToken = timesToken;
+	} else {
+		cardTimeToken = timesToken.slice(0, delimIndex);
+		shovelTimeToken = chopPrefix(timesToken.slice(delimIndex), "~")[0];
+	}
+
+	const cardTime = parseTime(lineNum, cardTimeToken, currWave.actions.slice(-1)[0]?.time);
+	if (isError(cardTime)) {
+		return cardTime;
+	}
+
+	if (shovelTimeToken === undefined) {
+		return [cardTime, null];
+	} else {
+		const shovelTime = parseTime(lineNum, shovelTimeToken, cardTime);
+		if (isError(shovelTime)) {
+			return shovelTime;
+		}
+		if (shovelTime < cardTime) {
+			return error(lineNum, "铲除时机不可早于用垫时机", shovelTimeToken);
+		}
+		return [cardTime, shovelTime];
+	}
+};
+
+function parseCardCol(lineNum: number, colToken: string, desc: string): number | Error {
+	const col = parseNatural(colToken);
+
+	if (col === null || col < 1 || col > 9) {
+		return error(lineNum, `用${desc}列应为 1~9 内的整数`, colToken);
+	}
+
+	return col;
+};
+
 export function parseFodder(out: ParserOutput, lineNum: number, line: string): null | Error {
 	const [currWaveNum, currWave] = lastWave(out);
 	if (currWaveNum === undefined || currWave === undefined) {
 		return error(lineNum, "请先设定波次", line);
 	}
-
-	const parseTimes = (timesToken: string): [number, number | null] | Error => {
-		let cardTimeToken: string;
-		let shovelTimeToken: string | undefined;
-
-		const delimIndex = Math.max(timesToken.lastIndexOf("+"), timesToken.lastIndexOf("~"));
-		if (delimIndex <= 0) {  // if starts with "+" (delimIndex is 0), still ignore it
-			cardTimeToken = timesToken;
-		} else {
-			cardTimeToken = timesToken.slice(0, delimIndex);
-			shovelTimeToken = chopPrefix(timesToken.slice(delimIndex), "~")[0];
-		}
-
-		const cardTime = parseTime(lineNum, cardTimeToken, currWave.actions.slice(-1)[0]?.time);
-		if (isError(cardTime)) {
-			return cardTime;
-		}
-
-		if (shovelTimeToken === undefined) {
-			return [cardTime, null];
-		} else {
-			const shovelTime = parseTime(lineNum, shovelTimeToken, cardTime);
-			if (isError(shovelTime)) {
-				return shovelTime;
-			}
-			if (shovelTime < cardTime) {
-				return error(lineNum, "铲除时机不可早于用垫时机", shovelTimeToken);
-			}
-			return [cardTime, shovelTime];
-		}
-	};
 
 	const parseRows = (rowsToken: string): { row: number, card: Card }[] | Error => {
 		const rows: { row: number, card: Card }[] = [];
@@ -297,16 +316,6 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 		}
 		rows.sort((a, b) => a.row - b.row);
 		return rows;
-	};
-
-	const parseCol = (colToken: string): number | Error => {
-		const col = parseNatural(colToken);
-
-		if (col === null || col < 1 || col > 9) {
-			return error(lineNum, "用垫列应为 1~9 内的整数", colToken);
-		}
-
-		return col;
 	};
 
 	const parseFodderArgs = (fodderArgTokens: string[], cardNum: number, mustProvideChoose: boolean)
@@ -376,17 +385,18 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 		return error(lineNum, "请提供用垫列", line);
 	}
 
-	const times = parseTimes(timeToken);
+	const times = parseCardAndShovelTime(lineNum, timeToken, currWave);
 	if (isError(times)) {
 		return times;
 	}
+	const time = times[0], shovelTime = times[1] ?? undefined;
 
 	const rows = parseRows(rowsToken);
 	if (isError(rows)) {
 		return rows;
 	}
 
-	const col = parseCol(colToken);
+	const col = parseCardCol(lineNum, colToken, "垫");
 	if (isError(col)) {
 		return col;
 	}
@@ -398,8 +408,8 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 		currWave.actions.push({
 			op: "FixedFodder",
 			symbol,
-			time: times[0],
-			shovelTime: times[1] ?? undefined,
+			time,
+			shovelTime,
 			cards,
 			positions
 		});
@@ -408,18 +418,73 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 		if (isError(fodderArgs)) {
 			return fodderArgs;
 		}
+		const { choose, waves } = fodderArgs;
 		currWave.actions.push({
 			op: "SmartFodder",
 			symbol,
-			time: times[0],
-			shovelTime: times[1] ?? undefined,
+			time,
+			shovelTime,
 			cards,
 			positions,
-			choose: fodderArgs.choose,
-			waves: fodderArgs.waves
+			choose,
+			waves,
 		});
 	}
 
+	return null;
+}
+
+export function parseJalapeno(out: ParserOutput, lineNum: number, line: string): null | Error {
+	const currWave = lastWave(out)[1];
+	if (currWave === undefined) {
+		return error(lineNum, "请先设定波次", line);
+	}
+
+	const parseRow = (rowToken: string): number | Error => {
+		const row = parseNatural(rowToken);
+		if (row === null || row < 1 || row > getMaxRows(out.setting.scene)) {
+			return error(lineNum, `用卡行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
+		}
+
+		return row;
+	};
+
+	const tokens = line.split(" ");
+	const symbol = tokens[0]!, timeToken = tokens[1], rowToken = tokens[2], colToken = tokens[3];
+
+	if (timeToken === undefined) {
+		return error(lineNum, "请提供用卡时机", line);
+	}
+	if (rowToken === undefined) {
+		return error(lineNum, "请提供用卡行", line);
+	}
+	if (colToken === undefined) {
+		return error(lineNum, "请提供用卡列", line);
+	}
+
+	const times = parseCardAndShovelTime(lineNum, timeToken, currWave);
+	if (isError(times)) {
+		return times;
+	}
+	const time = times[0], shovelTime = times[1] ?? undefined;
+
+	const row = parseRow(rowToken);
+	if (isError(row)) {
+		return row;
+	}
+
+	const col = parseCardCol(lineNum, colToken, "卡");
+	if (isError(col)) {
+		return col;
+	}
+
+	currWave.actions.push({
+		op: "Jalapeno",
+		symbol,
+		time,
+		shovelTime,
+		position: { row, col }
+	});
 	return null;
 }
 
@@ -444,7 +509,7 @@ export function parseSet(out: ParserOutput, lineNum: number, line: string): null
 		return error(lineNum, "表达式只能包含数字、运算符与括号", expr);
 	}
 	const val = Number(eval(expr));
-	if (isNaN(val)) {
+	if (!isFinite(val)) {
 		return error(lineNum, "表达式无效", expr);
 	}
 
@@ -455,21 +520,29 @@ export function parseSet(out: ParserOutput, lineNum: number, line: string): null
 	return null;
 }
 
-export function parseScene(out: ParserOutput, lineNum: number, line: string): null | Error {
-	if ("scene" in out.setting) {
-		return error(lineNum, "参数重复", "scene");
-	}
-	const value = line.split(":").slice(1).join(":");
+export function parseScene(out: ParserOutput, lines: Line[]): null | Error {
+	for (const { lineNum, line } of lines) {
+		if (line.startsWith("scene:")) {
+			if ("scene" in out.setting) {
+				return error(lineNum, "参数重复", "scene");
+			}
 
-	const upperCasedValue = value.toUpperCase();
-	if (["DE", "NE"].includes(upperCasedValue)) {
-		out.setting.scene = "NE";
-	} else if (["PE", "FE"].includes(upperCasedValue)) {
+			const scene = line.split(":").slice(1).join(":");
+			const upperCasedScene = scene.toUpperCase();
+
+			if (["DE", "NE"].includes(upperCasedScene)) {
+				out.setting.scene = "NE";
+			} else if (["PE", "FE"].includes(upperCasedScene)) {
+				out.setting.scene = "FE";
+			} else if (["RE", "ME"].includes(upperCasedScene)) {
+				out.setting.scene = "ME";
+			} else {
+				return error(lineNum, "未知场地", scene);
+			}
+		}
+	}
+	if (out.setting.scene === undefined) {
 		out.setting.scene = "FE";
-	} else if (["RE", "ME"].includes(upperCasedValue)) {
-		out.setting.scene = "ME";
-	} else {
-		return error(lineNum, "未知场地", value);
 	}
 	return null;
 }
@@ -539,14 +612,9 @@ export function parse(text: string) {
 		return lines;
 	}
 
-	for (const { lineNum, line } of lines) {
-		if (line.startsWith("scene:")) {
-			const scene = parseScene(out, lineNum, line);
-			if (isError(scene)) {
-				return scene;
-			}
-			break;
-		}
+	const parseResult = parseScene(out, lines);
+	if (isError(parseResult)) {
+		return parseResult;
 	}
 
 	for (let { lineNum, line } of lines) {
@@ -569,6 +637,8 @@ export function parse(text: string) {
 				parseResult = parseCob(out, lineNum, line, 2);
 			} else if (symbol === "C" || symbol === "C_POS" || symbol === "C_NUM") {
 				parseResult = parseFodder(out, lineNum, line);
+			} else if (symbol === "J") {
+				parseResult = parseJalapeno(out, lineNum, line);
 			} else if (symbol === "SET") {
 				parseResult = parseSet(out, lineNum, line);
 			} else {
@@ -585,11 +655,12 @@ export function parse(text: string) {
 }
 
 function lastWave(out: ParserOutput): [number | undefined, Wave | undefined] {
-	const largestNumberKey = Math.max(...Object.keys(out).filter(key => !isNaN(Number(key))).map(key => Number(key)));
-	if (largestNumberKey > 0) {
-		return [largestNumberKey, out[largestNumberKey]];
-	} else {
+	const numberKeys = Object.keys(out).map(key => Number(key)).filter(key => !isNaN(key));
+	if (numberKeys.length === 0) {
 		return [undefined, undefined];
+	} else {
+		const largestNumberKey = Math.max(...numberKeys);
+		return [largestNumberKey, out[largestNumberKey]];
 	}
 }
 
@@ -598,7 +669,7 @@ type Line = {
 	line: string;
 };
 
-function expandLines(lines: string[]): Line[] | Error {
+export function expandLines(lines: string[]): Line[] | Error {
 	const originalLines: Line[] = lines.map((line, lineNum) =>
 		({ lineNum: lineNum + 1, line: line.split("#")[0]!.trim() }));
 	const expandedLines: Line[] = [];
@@ -646,7 +717,7 @@ function expandLines(lines: string[]): Line[] | Error {
 	return expandedLines;
 }
 
-function replaceVariables(out: ParserOutput, line: string) {
+export function replaceVariables(out: ParserOutput, line: string) {
 	if (out.setting.variables === undefined) {
 		return line;
 	} else {
@@ -655,7 +726,7 @@ function replaceVariables(out: ParserOutput, line: string) {
 		let tail = line.split(" ").slice(reservedNum).join(" ");
 
 		for (const [varName, varValue] of Object.entries(out.setting.variables)) {
-			tail = tail.replace(varName, varValue.toString());
+			tail = tail.replaceAll(varName, varValue.toString());
 		}
 		return [head, tail].join(" ").trim();
 	}
