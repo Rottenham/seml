@@ -30,9 +30,9 @@ function runBinary(filename: string, args: string[], jsonFilePath: string) {
 	});
 }
 
-function compileToJson(src: string, fsPath: string)
+function compileToJson(doc: vscode.TextDocument)
 	: { dirName: string, baseName: string, jsonFilePath: string, jsonOutput: string, args: { [key: string]: string[] } } | undefined {
-	const parsedOutput = parse(src);
+	const parsedOutput = parse(doc.getText());
 	if (isError(parsedOutput)) {
 		const { lineNum, msg, src } = parsedOutput;
 		vscode.window.showErrorMessage(`[第${lineNum}行] ${msg}: ${src}`);
@@ -40,9 +40,8 @@ function compileToJson(src: string, fsPath: string)
 	}
 
 	const { out, args } = parsedOutput;
-	const jsonOutput = JSON.stringify(out, null, 4);
 
-	const semlFilePath = fsPath;
+	const semlFilePath = doc.uri.fsPath;
 	if (path.extname(semlFilePath) !== ".seml") {
 		vscode.window.showErrorMessage("请打开 .seml 文件");
 		return;
@@ -50,9 +49,14 @@ function compileToJson(src: string, fsPath: string)
 
 	const dirName = path.dirname(semlFilePath);
 	const baseName = path.basename(semlFilePath, ".seml");
-	const jsonFilePath = path.join(dirName, `${baseName}.json`);
 
-	return { dirName, baseName, jsonFilePath, jsonOutput, args };
+	return {
+		dirName,
+		baseName,
+		jsonFilePath: path.join(dirName, `${baseName}.json`),
+		jsonOutput: JSON.stringify(out, null, 4),
+		args
+	};
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -63,7 +67,7 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		const compiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
+		const compiledJson = compileToJson(editor.document);
 		if (compiledJson === undefined) {
 			return;
 		}
@@ -89,7 +93,7 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		const compiiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
+		const compiiledJson = compileToJson(editor.document);
 		if (compiiledJson === undefined) {
 			return;
 		}
@@ -101,8 +105,6 @@ export function activate(context: vscode.ExtensionContext) {
 			fs.mkdirSync(destDirName);
 		}
 
-		const outputFile = path.join(destDirName, baseName + "_smash");
-
 		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
 			if (err) {
 				vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
@@ -110,7 +112,9 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			runBinary('smash_test.exe',
-				[...Object.values(args).flatMap(x => x), "-f", jsonFilePath, "-o", outputFile],
+				[...Object.values(args).flatMap(x => x),
+					"-f", jsonFilePath,
+					"-o", path.join(destDirName, baseName + "_smash")],
 				jsonFilePath);
 		});
 	});

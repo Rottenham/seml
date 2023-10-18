@@ -27,24 +27,28 @@ function runBinary(filename, args, jsonFilePath) {
         vscode.window.showInformationMessage(`${stdout}`);
     });
 }
-function compileToJson(src, fsPath) {
-    const parsedOutput = (0, parser_1.parse)(src);
+function compileToJson(doc) {
+    const parsedOutput = (0, parser_1.parse)(doc.getText());
     if ((0, error_1.isError)(parsedOutput)) {
         const { lineNum, msg, src } = parsedOutput;
         vscode.window.showErrorMessage(`[第${lineNum}行] ${msg}: ${src}`);
         return;
     }
     const { out, args } = parsedOutput;
-    const jsonOutput = JSON.stringify(out, null, 4);
-    const semlFilePath = fsPath;
+    const semlFilePath = doc.uri.fsPath;
     if (path.extname(semlFilePath) !== ".seml") {
         vscode.window.showErrorMessage("请打开 .seml 文件");
         return;
     }
     const dirName = path.dirname(semlFilePath);
     const baseName = path.basename(semlFilePath, ".seml");
-    const jsonFilePath = path.join(dirName, `${baseName}.json`);
-    return { dirName, baseName, jsonFilePath, jsonOutput, args };
+    return {
+        dirName,
+        baseName,
+        jsonFilePath: path.join(dirName, `${baseName}.json`),
+        jsonOutput: JSON.stringify(out, null, 4),
+        args
+    };
 }
 function activate(context) {
     let compileToJsonCmd = vscode.commands.registerCommand('seml.compileToJson', () => {
@@ -52,7 +56,7 @@ function activate(context) {
         if (editor === undefined) {
             return;
         }
-        const compiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
+        const compiledJson = compileToJson(editor.document);
         if (compiledJson === undefined) {
             return;
         }
@@ -73,7 +77,7 @@ function activate(context) {
         if (editor === undefined) {
             return;
         }
-        const compiiledJson = compileToJson(editor.document.getText(), editor.document.uri.fsPath);
+        const compiiledJson = compileToJson(editor.document);
         if (compiiledJson === undefined) {
             return;
         }
@@ -82,13 +86,14 @@ function activate(context) {
         if (!fs.existsSync(destDirName)) {
             fs.mkdirSync(destDirName);
         }
-        const outputFile = path.join(destDirName, baseName + "_smash");
         fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
             if (err) {
                 vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
                 return;
             }
-            runBinary('smash_test.exe', [...Object.values(args).flatMap(x => x), "-f", jsonFilePath, "-o", outputFile], jsonFilePath);
+            runBinary('smash_test.exe', [...Object.values(args).flatMap(x => x),
+                "-f", jsonFilePath,
+                "-o", path.join(destDirName, baseName + "_smash")], jsonFilePath);
         });
     });
     context.subscriptions.push(testSmashCmd);
