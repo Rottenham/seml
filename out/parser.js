@@ -388,11 +388,11 @@ function parseProtect(out, lineNum, line) {
         if (row === null || row < 1 || row > getMaxRows(out.setting.scene)) {
             return (0, error_1.error)(lineNum, `保护行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
         }
-        const maxCol = isNormal ? 9 : 8;
-        if (col === null || col < 1 || col > maxCol) {
-            return (0, error_1.error)(lineNum, `${isNormal ? "普通植物" : "炮"}所在列应为 1~${maxCol} 内的整数`, colToken);
+        const minCol = isNormal ? 1 : 2;
+        if (col === null || col < minCol || col > 9) {
+            return (0, error_1.error)(lineNum, `${isNormal ? "普通植物" : "炮"}所在列应为 ${minCol}~9 内的整数`, colToken);
         }
-        const pos = { type: isNormal ? "Normal" : "Cob", row, col };
+        const pos = { type: isNormal ? "Normal" : "Cob", row, col: isNormal ? col : col - 1 };
         if (out.setting.protect.map(pos => pos.row).includes(row)) {
             return (0, error_1.error)(lineNum, "保护位置重叠", posToken);
         }

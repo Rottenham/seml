@@ -499,12 +499,12 @@ export function parseProtect(out: ParserOutput, lineNum: number, line: string): 
 			return error(lineNum, `保护行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
 		}
 
-		const maxCol = isNormal ? 9 : 8;
-		if (col === null || col < 1 || col > maxCol) {
-			return error(lineNum, `${isNormal ? "普通植物" : "炮"}所在列应为 1~${maxCol} 内的整数`, colToken);
+		const minCol = isNormal ? 1 : 2;
+		if (col === null || col < minCol || col > 9) {
+			return error(lineNum, `${isNormal ? "普通植物" : "炮"}所在列应为 ${minCol}~9 内的整数`, colToken);
 		}
 
-		const pos: ProtectPos = { type: isNormal ? "Normal" : "Cob", row, col };
+		const pos: ProtectPos = { type: isNormal ? "Normal" : "Cob", row, col: isNormal ? col : col - 1 };
 
 		if (out.setting.protect.map(pos => pos.row).includes(row)) {
 			return error(lineNum, "保护位置重叠", posToken);

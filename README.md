@@ -9,7 +9,7 @@ Seml 是为 Plants vs. Zombies Survival Endless 定制的标记语言, 可用于
 ```
 # 测试 PE.垫材24 旧PDc解的砸率
 scene:PE
-protect:17 27 57 67  # 要保护的炮位
+protect:18 28 58 68  # 要保护的炮位
 repeat:300           # 重复次数, 可以省略 (默认为 300)
 thread:16            # 并行进程数, 可以省略 (默认为 CPU 核心数) 
 
