@@ -664,7 +664,14 @@ export function parse(text: string) {
 			}
 		}
 	}
+
 	delete out.setting.variables;
+	for (const key in out) {
+		if (key !== "setting") {
+			out[key]!.actions.sort((a, b) => a.time - b.time);
+		}
+	}
+
 	return { out, args };
 }
 

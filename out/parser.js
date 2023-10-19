@@ -535,6 +535,11 @@ function parse(text) {
         }
     }
     delete out.setting.variables;
+    for (const key in out) {
+        if (key !== "setting") {
+            out[key].actions.sort((a, b) => a.time - b.time);
+        }
+    }
     return { out, args };
 }
 exports.parse = parse;
