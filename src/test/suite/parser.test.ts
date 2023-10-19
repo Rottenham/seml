@@ -101,7 +101,8 @@ describe("parseCob", () => {
                 positions: [{
                     row: 2,
                     col: 9,
-                }]
+                }],
+                cobCol: undefined
             },
         ]);
     });
@@ -118,7 +119,8 @@ describe("parseCob", () => {
                 positions: [{
                     row: 2,
                     col: 9,
-                }]
+                }],
+                cobCol: undefined
             },
             {
                 op: "Cob",
@@ -127,7 +129,8 @@ describe("parseCob", () => {
                 positions: [{
                     row: 2,
                     col: 9,
-                }]
+                }],
+                cobCol: undefined
             },
         ]);
     });
@@ -146,7 +149,8 @@ describe("parseCob", () => {
                 }, {
                     row: 5,
                     col: 9,
-                }]
+                }],
+                cobCol: undefined
             },
         ]);
     });
@@ -328,7 +332,7 @@ describe("parseFodder", () => {
             time: 300,
             symbol: "C_NUM",
             shovelTime: undefined,
-            cards: [
+            fodders: [
                 "Normal"
             ],
             positions: [
@@ -350,7 +354,7 @@ describe("parseFodder", () => {
                 time: 300,
                 symbol: "C",
                 shovelTime: undefined,
-                cards: [
+                fodders: [
                     "Normal"
                 ],
                 positions: [
@@ -371,7 +375,7 @@ describe("parseFodder", () => {
                 time: 300,
                 symbol: "C",
                 shovelTime: undefined,
-                cards: [
+                fodders: [
                     "Puff",
                 ],
                 positions: [
@@ -392,7 +396,7 @@ describe("parseFodder", () => {
                 time: 300,
                 symbol: "C",
                 shovelTime: undefined,
-                cards: [
+                fodders: [
                     "Pot",
                 ],
                 positions: [
@@ -413,7 +417,7 @@ describe("parseFodder", () => {
                 time: 300,
                 symbol: "C",
                 shovelTime: 300 + 134,
-                cards: [
+                fodders: [
                     "Normal"
                 ],
                 positions: [
@@ -434,7 +438,7 @@ describe("parseFodder", () => {
                 time: 300,
                 symbol: "C",
                 shovelTime: 600,
-                cards: [
+                fodders: [
                     "Normal"
                 ],
                 positions: [
@@ -455,7 +459,7 @@ describe("parseFodder", () => {
                 time: 300,
                 symbol: "C",
                 shovelTime: undefined,
-                cards: [
+                fodders: [
                     "Normal",
                     "Normal",
                 ],
@@ -481,7 +485,7 @@ describe("parseFodder", () => {
                 time: 300,
                 symbol: "C_POS",
                 shovelTime: undefined,
-                cards: [
+                fodders: [
                     "Puff",
                     "Normal",
                 ],
@@ -536,13 +540,6 @@ describe('parseJalapeno', () => {
         );
     });
 
-    it('should return an error if shovel time is negative', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        expect(parseJalapeno(out, 1, 'J 100+-134 1 1')).to.deep.equal(
-            error(1, '时间应为非负整数', '-134')
-        );
-    });
-
     it('should return an error if row is not a number', () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
         expect(parseJalapeno(out, 1, 'J 100 a 1')).to.deep.equal(
@@ -572,7 +569,6 @@ describe('parseJalapeno', () => {
                 op: 'Jalapeno',
                 symbol: 'J',
                 time: 100,
-                shovelTime: undefined,
                 position: { row: 1, col: 1 },
             },
         ]);
@@ -587,28 +583,12 @@ describe('parseJalapeno', () => {
                 op: 'Jalapeno',
                 symbol: 'J',
                 time: 100,
-                shovelTime: undefined,
                 position: { row: 1, col: 1 },
             },
             {
                 op: 'Jalapeno',
                 symbol: 'J',
                 time: 100 + 134,
-                shovelTime: undefined,
-                position: { row: 1, col: 1 },
-            },
-        ]);
-    });
-
-    it('should add a Jalapeno action with shovel time to the current wave', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        expect(parseJalapeno(out, 1, 'J 100~200 1 1')).equal(null);
-        expect(out[1]?.actions).to.deep.equal([
-            {
-                op: 'Jalapeno',
-                symbol: 'J',
-                time: 100,
-                shovelTime: 200,
                 position: { row: 1, col: 1 },
             },
         ]);
@@ -756,7 +736,7 @@ describe("parseProtect", () => {
                 protect: [{
                     type: "Cob",
                     row: 1,
-                    col: 7,
+                    col: 8,
                 },
                 {
                     type: "Normal",
@@ -833,13 +813,14 @@ describe("parse", () => {
                                     row: 2,
                                     col: 9,
                                 }],
+                            cobCol: undefined
                         },
                         {
                             op: "FixedFodder",
                             time: 300 + 134,
                             symbol: "C",
                             shovelTime: 300 + 134 + 134,
-                            cards: [
+                            fodders: [
                                 "Normal",
                             ],
                             positions: [
@@ -867,7 +848,7 @@ describe("parse", () => {
                             time: 300,
                             symbol: "C_POS",
                             shovelTime: 500,
-                            cards: [
+                            fodders: [
                                 "Normal",
                                 "Normal",
                             ],
@@ -890,7 +871,7 @@ describe("parse", () => {
     });
 
     it("should parse multiple waves with metadata", () => {
-        expect(parse("thread:1\nrepeat:10\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 3 4 choose:1 waves:12\n"))
+        expect(parse("repeat:10\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 3 4 choose:1 waves:12\n"))
             .to.deep.equal({
                 out: {
                     setting: { scene: "FE" },
@@ -911,7 +892,8 @@ describe("parse", () => {
                                         row: 5,
                                         col: 9,
                                     }
-                                ]
+                                ],
+                                cobCol: undefined
                             }
                         ],
                     },
@@ -924,7 +906,7 @@ describe("parse", () => {
                                 time: 400,
                                 symbol: "C_POS",
                                 shovelTime: 400 + 134,
-                                cards: [
+                                fodders: [
                                     "Normal",
                                 ],
                                 positions: [
@@ -940,7 +922,6 @@ describe("parse", () => {
                     },
                 }, args: {
                     repeat: ["-r", "10"],
-                    thread: ["-t", "1"],
                 }
             });
     });
@@ -962,7 +943,8 @@ describe("parse", () => {
                                     row: 2,
                                     col: 9,
                                 }
-                            ]
+                            ],
+                            cobCol: undefined
                         },
                     ],
                 },

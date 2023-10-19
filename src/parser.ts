@@ -11,24 +11,24 @@ type Cob = {
 	readonly symbol: string;
 	readonly time: number;
 	readonly positions: Position[];
+	readonly cobCol?: number;
 };
 
 type Jalapeno = {
 	readonly op: "Jalapeno";
 	readonly symbol: string;
-	readonly shovelTime?: number;
 	readonly time: number;
 	readonly position: Position;
 };
 
-type Card = "Normal" | "Puff" | "Pot";
+type Fodder = "Normal" | "Puff" | "Pot";
 
 type FixedFodder = {
 	readonly op: "FixedFodder";
 	readonly symbol: string;
 	readonly time: number;
 	readonly shovelTime?: number;
-	readonly cards: Card[];
+	readonly fodders: Fodder[];
 	readonly positions: Position[];
 };
 
@@ -37,7 +37,7 @@ type SmartFodder = {
 	readonly symbol: string;
 	readonly time: number;
 	readonly shovelTime?: number;
-	readonly cards: Card[];
+	readonly fodders: Fodder[];
 	readonly positions: Position[];
 	readonly choose: number;
 	readonly waves: number[];
@@ -213,6 +213,23 @@ export function parseCob(out: ParserOutput, lineNum: number, line: string, cobNu
 		return error(lineNum, "请提供落点列", line);
 	}
 
+	let cobCol: number | undefined;
+	if (/\d$/.test(symbol)) {
+		if (out.setting.scene !== "ME") {
+			return error(lineNum, "只有屋顶场合可以指定炮尾列", symbol);
+		}
+
+		const parsedCobCol = parseNatural(symbol.slice(-1));
+		if (parsedCobCol === null || parsedCobCol < 1 || parsedCobCol > 8) {
+			return error(lineNum, "炮尾列应为 1~8 内的整数", symbol.slice(-1));
+		}
+		cobCol = parsedCobCol;
+	} else {
+		if (out.setting.scene === "ME") {
+			return error(lineNum, "屋顶场合请提供落点列", line);
+		}
+	}
+
 	const time = parseTime(lineNum, timeToken, currWave.actions[currWave.actions.length - 1]?.time);
 	if (isError(time)) {
 		return time;
@@ -232,7 +249,8 @@ export function parseCob(out: ParserOutput, lineNum: number, line: string, cobNu
 		op: "Cob",
 		symbol,
 		time,
-		positions: rows.map(row => ({ row, col }))
+		positions: rows.map(row => ({ row, col })),
+		cobCol
 	});
 	return null;
 }
@@ -285,8 +303,8 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 		return error(lineNum, "请先设定波次", line);
 	}
 
-	const parseRows = (rowsToken: string): { row: number, card: Card }[] | Error => {
-		const rows: { row: number, card: Card }[] = [];
+	const parseRows = (rowsToken: string): { row: number, card: Fodder }[] | Error => {
+		const rows: { row: number, card: Fodder }[] = [];
 
 		let skip = false;
 		for (const [i, rowToken] of [...rowsToken].entries()) {
@@ -298,7 +316,7 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 					return error(lineNum, `用垫行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
 				}
 
-				let card: Card = "Normal";
+				let card: Fodder = "Normal";
 				const nextChar = rowsToken[i + 1];;
 
 				if (nextChar !== undefined) {
@@ -401,7 +419,7 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 		return col;
 	}
 
-	const cards: Card[] = rows.map(({ card }) => card);
+	const cards: Fodder[] = rows.map(({ card }) => card);
 	const positions: Position[] = rows.map(({ row }) => ({ row, col }));
 
 	if (symbol === "C") {
@@ -410,7 +428,7 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 			symbol,
 			time,
 			shovelTime,
-			cards,
+			fodders: cards,
 			positions
 		});
 	} else {
@@ -424,7 +442,7 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 			symbol,
 			time,
 			shovelTime,
-			cards,
+			fodders: cards,
 			positions,
 			choose,
 			waves,
@@ -462,11 +480,10 @@ export function parseJalapeno(out: ParserOutput, lineNum: number, line: string):
 		return error(lineNum, "请提供用卡列", line);
 	}
 
-	const times = parseCardAndShovelTime(lineNum, timeToken, currWave);
-	if (isError(times)) {
-		return times;
+	const time = parseTime(lineNum, timeToken, currWave.actions.slice(-1)[0]?.time);
+	if (isError(time)) {
+		return time;
 	}
-	const time = times[0], shovelTime = times[1] ?? undefined;
 
 	const row = parseRow(rowToken);
 	if (isError(row)) {
@@ -482,7 +499,6 @@ export function parseJalapeno(out: ParserOutput, lineNum: number, line: string):
 		op: "Jalapeno",
 		symbol,
 		time,
-		shovelTime,
 		position: { row, col }
 	});
 	return null;
@@ -577,7 +593,7 @@ export function parseProtect(out: ParserOutput, lineNum: number, line: string): 
 			return error(lineNum, `${isNormal ? "普通植物" : "炮"}所在列应为 ${minCol}~9 内的整数`, colToken);
 		}
 
-		const pos: ProtectPos = { type: isNormal ? "Normal" : "Cob", row, col: isNormal ? col : col - 1 };
+		const pos: ProtectPos = { type: isNormal ? "Normal" : "Cob", row, col };
 
 		if (out.setting.protect.map(pos => pos.row).includes(row)) {
 			return error(lineNum, "保护位置重叠", posToken);
@@ -627,13 +643,11 @@ export function parse(text: string) {
 				parseResult = parseProtect(out, lineNum, line);
 			} else if (symbol.startsWith("repeat:")) {
 				parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
-			} else if (symbol.startsWith("thread:")) {
-				parseResult = parseIntArg(args, "thread", "-t", lineNum, line);
 			} else if (symbol.startsWith("w")) {
 				parseResult = parseWave(out, lineNum, line);
-			} else if (["B", "P", "D"].includes(symbol.toUpperCase())) {
+			} else if (/^(B|P|D)\d?$/.test(symbol.toUpperCase())) {
 				parseResult = parseCob(out, lineNum, line, 1);
-			} else if (["BB", "PP", "DD"].includes(symbol.toUpperCase())) {
+			} else if (/^(BB|PP|DD)\d?$/.test(symbol.toUpperCase())) {
 				parseResult = parseCob(out, lineNum, line, 2);
 			} else if (symbol === "C" || symbol === "C_POS" || symbol === "C_NUM") {
 				parseResult = parseFodder(out, lineNum, line);
