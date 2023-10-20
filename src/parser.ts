@@ -52,6 +52,8 @@ type Wave = {
 	readonly startTick?: number,
 };
 
+type Round = Wave[];
+
 type ProtectPos = {
 	readonly type: "Cob" | "Normal"
 } & Position;
@@ -62,7 +64,7 @@ export type ParserOutput = {
 		scene?: "NE" | "FE" | "ME",
 		variables?: { [key: string]: number },
 	},
-	[key: number]: Wave;
+	rounds: Round[],
 };
 
 function getMaxRows(scene: "NE" | "FE" | "ME" | undefined) {
@@ -73,7 +75,7 @@ function getMaxRows(scene: "NE" | "FE" | "ME" | undefined) {
 	}
 }
 
-export function parseWave(out: ParserOutput, lineNum: number, line: string): null | Error {
+export function parseWave(out: ParserOutput, round: number, lineNum: number, line: string): null | Error {
 	const parseWaveNum = (waveNumToken: string): number | Error => {
 		const waveNum = parseNatural(waveNumToken.slice(1));
 
@@ -134,11 +136,11 @@ export function parseWave(out: ParserOutput, lineNum: number, line: string): nul
 		return waveNum;
 	}
 
-	if (waveNum in out) {
+	if (waveNum - 1 in out.rounds[round]!) {
 		return error(lineNum, "波数重复", waveNumToken);
 	}
 
-	const prevWaveNum = lastWave(out)[0] ?? 0;
+	const prevWaveNum = out.rounds[round]!.length;
 	if (prevWaveNum + 1 !== waveNum) {
 		return error(lineNum, `请先设定第 ${prevWaveNum + 1} 波`, waveNumToken);
 	}
@@ -159,7 +161,7 @@ export function parseWave(out: ParserOutput, lineNum: number, line: string): nul
 		return error(lineNum, "波长应 >= 最后一次用冰时机", line);
 	}
 
-	out[waveNum] = { iceTimes: iceTimes, waveLength: waveLength, actions: [], startTick };
+	out.rounds[round]!.push({ iceTimes: iceTimes, waveLength: waveLength, actions: [], startTick });
 	return null;
 }
 
@@ -181,8 +183,8 @@ function parseTime(lineNum: number, timeToken: string, prevTime: number | undefi
 	}
 };
 
-export function parseCob(out: ParserOutput, lineNum: number, line: string, cobNum: number): null | Error {
-	const currWave = lastWave(out)[1];
+export function parseCob(out: ParserOutput, round: number | undefined, lineNum: number, line: string, cobNum: number): null | Error {
+	const currWave = getCurrWave(out, round);
 	if (currWave === undefined) {
 		return error(lineNum, "请先设定波次", line);
 	}
@@ -273,8 +275,9 @@ function parseCardCol(lineNum: number, colToken: string, desc: string): number |
 	return col;
 };
 
-export function parseFodder(out: ParserOutput, lineNum: number, line: string): null | Error {
-	const [currWaveNum, currWave] = lastWave(out);
+export function parseFodder(out: ParserOutput, round: number | undefined, lineNum: number, line: string): null | Error {
+	const currWaveNum = getCurrWaveNum(out, round);
+	const currWave = getCurrWave(out, round);
 	if (currWaveNum === undefined || currWave === undefined) {
 		return error(lineNum, "请先设定波次", line);
 	}
@@ -375,7 +378,7 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 			} else if (key === "waves") {
 				const waves: number[] = [];
 
-				for (const waveNumToken of value) {
+				for (const waveNumToken of value.split(",")) {
 					const waveNum = parseNatural(waveNumToken);
 					if (waveNum === null || waveNum < 1 || waveNum > currWaveNum) {
 						return error(lineNum, `waves 的值应为 1~${currWaveNum} 内的整数`, value);
@@ -453,8 +456,8 @@ export function parseFodder(out: ParserOutput, lineNum: number, line: string): n
 	return null;
 }
 
-export function parseJalapeno(out: ParserOutput, lineNum: number, line: string): null | Error {
-	const currWave = lastWave(out)[1];
+export function parseJalapeno(out: ParserOutput, round: number | undefined, lineNum: number, line: string): null | Error {
+	const currWave = getCurrWave(out, round);
 	if (currWave === undefined) {
 		return error(lineNum, "请先设定波次", line);
 	}
@@ -615,12 +618,16 @@ export function parseIntArg(args: { [key: string]: string[] }, argName: string, 
 }
 
 export function parse(text: string) {
-	const out: ParserOutput = { setting: {} };
+	const out: ParserOutput = { setting: {}, rounds: [] };
 	const args: { [key: string]: string[] } = {};
 
-	const lines = expandLines(text.split(/\r?\n/));
-	if (isError(lines)) {
-		return lines;
+	const expandedLines = expandLines(text.split(/\r?\n/));
+	if (isError(expandedLines)) {
+		return expandedLines;
+	}
+	const { lines, totalRound } = expandedLines;
+	for (let round = 0; round < totalRound; round++) {
+		out.rounds.push([]);
 	}
 
 	const parseResult = parseScene(out, lines);
@@ -628,7 +635,7 @@ export function parse(text: string) {
 		return parseResult;
 	}
 
-	for (let { lineNum, line } of lines) {
+	for (let { lineNum, line, round } of lines) {
 		if (line.length > 0 && !line.startsWith("scene:")) {
 			line = replaceVariables(out, line);
 			const symbol = line.split(" ")[0]!;
@@ -639,15 +646,15 @@ export function parse(text: string) {
 			} else if (symbol.startsWith("repeat:")) {
 				parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
 			} else if (symbol.startsWith("w")) {
-				parseResult = parseWave(out, lineNum, line);
+				parseResult = parseWave(out, round!, lineNum, line);
 			} else if (/^(B|P|D)\d?$/.test(symbol.toUpperCase())) {
-				parseResult = parseCob(out, lineNum, line, 1);
+				parseResult = parseCob(out, round, lineNum, line, 1);
 			} else if (/^(BB|PP|DD)\d?$/.test(symbol.toUpperCase())) {
-				parseResult = parseCob(out, lineNum, line, 2);
+				parseResult = parseCob(out, round, lineNum, line, 2);
 			} else if (symbol === "C" || symbol === "C_POS" || symbol === "C_NUM") {
-				parseResult = parseFodder(out, lineNum, line);
+				parseResult = parseFodder(out, round, lineNum, line);
 			} else if (symbol === "J") {
-				parseResult = parseJalapeno(out, lineNum, line);
+				parseResult = parseJalapeno(out, round, lineNum, line);
 			} else if (symbol === "SET") {
 				parseResult = parseSet(out, lineNum, line);
 			} else {
@@ -661,34 +668,48 @@ export function parse(text: string) {
 	}
 
 	delete out.setting.variables;
-	for (const key in out) {
-		if (key !== "setting") {
-			out[key]!.actions.sort((a, b) => a.time - b.time);
+	for (const round of out.rounds) {
+		for (const wave of round) {
+			wave.actions.sort((a, b) => a.time - b.time);
 		}
 	}
 
 	return { out, args };
 }
 
-function lastWave(out: ParserOutput): [number | undefined, Wave | undefined] {
-	const numberKeys = Object.keys(out).map(key => Number(key)).filter(key => !isNaN(key));
-	if (numberKeys.length === 0) {
-		return [undefined, undefined];
-	} else {
-		const largestNumberKey = Math.max(...numberKeys);
-		return [largestNumberKey, out[largestNumberKey]];
-	}
-}
-
 type Line = {
 	lineNum: number;
 	line: string;
+	round?: number;
 };
 
-export function expandLines(lines: string[]): Line[] | Error {
+function getDuplicate(lines: Line[]): number | Error {
+	let duplicate: number | null = null;
+	for (const { lineNum, line } of lines) {
+		if (line.startsWith("duplicate:")) {
+			if (duplicate !== null) {
+				return error(lineNum, "duplicate 重复", line);
+			}
+
+			const parsedDuplicate = parseNatural(line.split(":")[1]!);
+			if (parsedDuplicate === null || parsedDuplicate <= 0) {
+				return error(lineNum, "duplicate 的值应为正整数", line);
+			}
+			duplicate = parsedDuplicate;
+		}
+	}
+	return duplicate ?? 1;
+}
+
+export function expandLines(lines: string[]): { lines: Line[], totalRound: number } | Error {
 	const originalLines: Line[] = lines.map((line, lineNum) =>
 		({ lineNum: lineNum + 1, line: line.split("#")[0]!.trim() }));
 	const expandedLines: Line[] = [];
+
+	const duplicate = getDuplicate(originalLines);
+	if (isError(duplicate)) {
+		return duplicate;
+	}
 
 	const populateLineWithWave = (line: string, waveNum: number) => {
 		if (line.startsWith("w")) {
@@ -730,7 +751,22 @@ export function expandLines(lines: string[]): Line[] | Error {
 			cur = nextCur;
 		}
 	}
-	return expandedLines;
+
+	let cur = 0;
+	while (cur < expandedLines.length && !expandedLines[cur]!.line.startsWith("w")) {
+		cur++;
+	}
+	const originalLength = expandedLines.length;
+	for (let i = cur; i < originalLength; i++) {
+		expandedLines[i]!.round = 0;
+	}
+	for (let round = 1; round < duplicate; round++) {
+		for (let i = cur; i < originalLength; i++) {
+			expandedLines.push({ ...expandedLines[i]!, round });
+		}
+	}
+
+	return { lines: expandedLines, totalRound: duplicate };
 }
 
 export function replaceVariables(out: ParserOutput, line: string) {
@@ -746,4 +782,18 @@ export function replaceVariables(out: ParserOutput, line: string) {
 		}
 		return [head, tail].join(" ").trim();
 	}
+}
+
+function getCurrWaveNum(out: ParserOutput, round: number | undefined): number | undefined {
+	if (round === undefined) {
+		return undefined;
+	}
+	return out.rounds[round]?.length;
+}
+
+function getCurrWave(out: ParserOutput, round: number | undefined): Wave | undefined {
+	if (round === undefined) {
+		return undefined;
+	}
+	return out.rounds[round]?.slice(-1)[0];
 }

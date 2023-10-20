@@ -7,61 +7,61 @@ const chai_1 = require("chai");
 describe("parseCob", () => {
     let out;
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {}, rounds: [[]] };
     });
     it("should return an error if no wave is set", () => {
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 9", 1)).to.deep.equal((0, error_1.error)(1, "请先设定波次", "P 300 2 9"));
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 2 9", 1)).to.deep.equal((0, error_1.error)(1, "请先设定波次", "P 300 2 9"));
     });
     it("should return an error if time is negative", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P -1 2 9", 1)).to.deep.equal((0, error_1.error)(1, "时间应为非负整数", "-1"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P -1 2 9", 1)).to.deep.equal((0, error_1.error)(1, "时间应为非负整数", "-1"));
     });
     it("should return an error if delay is used without context", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P +220 2 9", 1)).to.deep.equal((0, error_1.error)(1, "没有延迟基准", "+220"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P +220 2 9", 1)).to.deep.equal((0, error_1.error)(1, "没有延迟基准", "+220"));
     });
     it("should return an error if number of rows dooes not match expected number of cobs", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "PP 300 2 9", 2)).to.deep.equal((0, error_1.error)(1, "请提供 2 个落点行", "2"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "PP 300 2 9", 2)).to.deep.equal((0, error_1.error)(1, "请提供 2 个落点行", "2"));
     });
     it("should return an error if colToken is missing", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2", 1)).to.deep.equal((0, error_1.error)(1, "请提供炮生效时机, 落点行, 落点列", "P 300 2"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 2", 1)).to.deep.equal((0, error_1.error)(1, "请提供炮生效时机, 落点行, 落点列", "P 300 2"));
     });
     it("should return an error if row is not a number", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 a 9", 1)).to.deep.equal((0, error_1.error)(1, "落点行应为 1~6 内的整数", "a"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 a 9", 1)).to.deep.equal((0, error_1.error)(1, "落点行应为 1~6 内的整数", "a"));
     });
     it("should return an error if row is not within 1-6", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 7 9", 1)).to.deep.equal((0, error_1.error)(1, "落点行应为 1~6 内的整数", "7"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 7 9", 1)).to.deep.equal((0, error_1.error)(1, "落点行应为 1~6 内的整数", "7"));
     });
     it("should return an error if col is not a number", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 a", 1)).to.deep.equal((0, error_1.error)(1, "落点列应为 0.0~10.0 内的数字", "a"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 2 a", 1)).to.deep.equal((0, error_1.error)(1, "落点列应为 0.0~10.0 内的数字", "a"));
     });
     it("should return an error if col is not within 0.0-10.0", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 11", 1)).to.deep.equal((0, error_1.error)(1, "落点列应为 0.0~10.0 内的数字", "11"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 2 11", 1)).to.deep.equal((0, error_1.error)(1, "落点列应为 0.0~10.0 内的数字", "11"));
     });
     it("should return an error if cob col is specified for non-roof scenes", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P3 300 2 11", 1)).to.deep.equal((0, error_1.error)(1, "只有屋顶场合可以指定炮尾列", "P3"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P3 300 2 11", 1)).to.deep.equal((0, error_1.error)(1, "只有屋顶场合可以指定炮尾列", "P3"));
     });
     it("should return an error if cob col is not specified for roof scenes", () => {
         out.setting.scene = "ME";
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 9", 1)).to.deep.equal((0, error_1.error)(1, "屋顶场合请提供落点列", "P"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 2 9", 1)).to.deep.equal((0, error_1.error)(1, "屋顶场合请提供落点列", "P"));
     });
     it("should return an error if specified cob col is invalid", () => {
         out.setting.scene = "ME";
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P0 300 2 11", 1)).to.deep.equal((0, error_1.error)(1, "炮尾列应为 1~8 内的整数", "0"));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P0 300 2 11", 1)).to.deep.equal((0, error_1.error)(1, "炮尾列应为 1~8 内的整数", "0"));
     });
     it("should add a Cob action to the current wave", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 9", 1)).equal(null);
-        (0, chai_1.expect)(out[1]?.actions).to.deep.equal([
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 2 9", 1)).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "Cob",
                 time: 300,
@@ -76,9 +76,9 @@ describe("parseCob", () => {
     });
     it("should add a Cob action to the current wave with specified cob col", () => {
         out.setting.scene = "ME";
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P3 300 2 9", 1)).equal(null);
-        (0, chai_1.expect)(out[1]?.actions).to.deep.equal([
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P3 300 2 9", 1)).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "Cob",
                 time: 300,
@@ -92,10 +92,10 @@ describe("parseCob", () => {
         ]);
     });
     it("should add a delayed Cob action to the current wave", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 9", 1)).equal(null);
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 2, "P +134 2 9", 1)).equal(null);
-        (0, chai_1.expect)(out[1]?.actions).to.deep.equal([
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 2 9", 1)).equal(null);
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 2, "P +134 2 9", 1)).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "Cob",
                 symbol: "P",
@@ -119,9 +119,9 @@ describe("parseCob", () => {
         ]);
     });
     it("should add multiple Cob actions to the current wave if there are multiple rows", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "PP 300 25 9", 2)).equal(null);
-        (0, chai_1.expect)(out[1]?.actions).to.deep.equal([
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "PP 300 25 9", 2)).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "Cob",
                 symbol: "PP",
@@ -141,11 +141,11 @@ describe("parseCob", () => {
 describe('parseWave', () => {
     let out;
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {}, rounds: [[]] };
     });
     it('should parse valid wave', () => {
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 100 200 300 601')).equal(null);
-        (0, chai_1.expect)(out[1]).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w1 100 200 300 601')).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0]).to.deep.equal({
             iceTimes: [100, 200, 300],
             waveLength: 601,
             actions: [],
@@ -153,8 +153,8 @@ describe('parseWave', () => {
         });
     });
     it('should parse valid wave with start tick', () => {
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 100 200 300 300~601')).equal(null);
-        (0, chai_1.expect)(out[1]).to.deep.equal({
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w1 100 200 300 300~601')).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0]).to.deep.equal({
             iceTimes: [100, 200, 300],
             waveLength: 601,
             actions: [],
@@ -162,128 +162,128 @@ describe('parseWave', () => {
         });
     });
     it('should return an error for invalid wave number', () => {
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w0 100 200 300 601'))
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w0 100 200 300 601'))
             .to.deep.equal((0, error_1.error)(1, '波数应为 1~9 内的整数', 'w0'));
     });
     it('should return an error for duplicate wave number', () => {
-        out[1] = { iceTimes: [], waveLength: 601, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 100 200 300 601'))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 601, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w1 100 200 300 601'))
             .to.deep.equal((0, error_1.error)(1, '波数重复', 'w1'));
     });
     it('should return an error for missing wave length', () => {
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1'))
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w1'))
             .to.deep.equal((0, error_1.error)(1, '请提供波长', 'w1'));
     });
     it('should return an error for invalid wave length', () => {
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 100 200 300 0'))
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w1 100 200 300 0'))
             .to.deep.equal((0, error_1.error)(1, '波长应为 >= 601 的整数', '0'));
     });
     it('should return an error for invalid ice time', () => {
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 100 a 300 601'))
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w1 100 a 300 601'))
             .to.deep.equal((0, error_1.error)(1, '用冰时机应为正整数', 'a'));
     });
     it('should return an error for wave length less than last ice time', () => {
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 602 601'))
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w1 602 601'))
             .to.deep.equal((0, error_1.error)(1, '波长应 >= 最后一次用冰时机', 'w1 602 601'));
     });
     it('should return an error for missing previous wave', () => {
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w2 601'))
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w2 601'))
             .to.deep.equal((0, error_1.error)(1, '请先设定第 1 波', 'w2'));
     });
     it('should return an error if start tick is invalid', () => {
-        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 602~601'))
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 0, 1, 'w1 602~601'))
             .to.deep.equal((0, error_1.error)(1, '起始时刻应 <= 波长', '602'));
     });
 });
 describe("parseFodder", () => {
     let out;
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {}, rounds: [[]] };
     });
     it("should return an error if no wave has been set", () => {
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300 2 9"))
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300 2 9"))
             .to.deep.equal((0, error_1.error)(1, "请先设定波次", "C 300 2 9"));
     });
     it("should return an error if delay is used without context", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C +134 2 9"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C +134 2 9"))
             .to.deep.equal((0, error_1.error)(1, "没有延迟基准", "+134"));
     });
     it("should return an error if shovel time is negative", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 100+-134 2 9"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 100+-134 2 9"))
             .to.deep.equal((0, error_1.error)(1, "时间应为非负整数", "-134"));
     });
     it("should return an error if shovel time is earlier than fodder time", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300~299 2 9"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300~299 2 9"))
             .to.deep.equal((0, error_1.error)(1, "铲除时机不可早于用垫时机", "299"));
     });
     it("should return an error if colToken is missing", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300 2"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300 2"))
             .to.deep.equal((0, error_1.error)(1, "请提供用垫时机, 用垫行, 用垫列", "C 300 2"));
     });
     it("should return an error if rows are invalid", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300 7 9"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300 7 9"))
             .to.deep.equal((0, error_1.error)(1, "用垫行应为 1~6 内的整数", "7"));
     });
     it("should return an error if colToken is invalid", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300 2 0"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300 2 0"))
             .to.deep.equal((0, error_1.error)(1, "用垫列应为 1~9 内的整数", "0"));
     });
     it("should return an error if choose value is invalid", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2 9 choose:0"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2 9 choose:0"))
             .to.deep.equal((0, error_1.error)(1, "choose 的值应为 1~1 内的整数", "0"));
     });
     it("should return an error if wave value is invalid", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2 9 choose:1 waves:0"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2 9 choose:1 waves:0"))
             .to.deep.equal((0, error_1.error)(1, "waves 的值应为 1~1 内的整数", "0"));
     });
     it("should return an error if wave value is repeated", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2 9 choose:1 waves:11"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2 9 choose:1 waves:1,1"))
             .to.deep.equal((0, error_1.error)(1, "waves 重复", "1"));
     });
     it("should return an error if parameter format is invalid", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2 9 ??"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2 9 ??"))
             .to.deep.equal((0, error_1.error)(1, "传参格式应为 [参数]:[值] ", "??"));
     });
     it("should return an error if parameter key is empty", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2 9 :1"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2 9 :1"))
             .to.deep.equal((0, error_1.error)(1, "参数不可为空", ":1"));
     });
     it("should return an error if parameter value is empty", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2 9 choose:"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2 9 choose:"))
             .to.deep.equal((0, error_1.error)(1, "值不可为空", "choose:"));
     });
     it("should return an error if parameter key is unknown", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2 9 wave:1"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2 9 wave:1"))
             .to.deep.equal((0, error_1.error)(1, "未知参数", "wave"));
     });
     it("should return an error if parameter key is duplicated", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2 9 choose:1 choose:2"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2 9 choose:1 choose:2"))
             .to.deep.equal((0, error_1.error)(1, "参数重复", "choose"));
     });
     it("should return an error if choose value is missing for C_POS", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2 9 waves:1"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2 9 waves:1"))
             .to.deep.equal((0, error_1.error)(1, "必须提供 choose 的值", ""));
     });
     it("should not return an error if choose value is missing for C_NUM", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_NUM 300 2 9"))
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_NUM 300 2 9"))
             .to.equal(null);
-        (0, chai_1.expect)(out[1].actions).to.deep.equal([{
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([{
                 op: "SmartFodder",
                 time: 300,
                 symbol: "C_NUM",
@@ -302,9 +302,9 @@ describe("parseFodder", () => {
             }]);
     });
     it("should add a Normal card action to the current wave", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300 2 9")).equal(null);
-        (0, chai_1.expect)(out[1].actions).to.deep.equal([
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300 2 9")).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "FixedFodder",
                 time: 300,
@@ -323,9 +323,9 @@ describe("parseFodder", () => {
         ]);
     });
     it("should add a Puff card action to the current wave", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300 2' 9")).equal(null);
-        (0, chai_1.expect)(out[1].actions).to.deep.equal([
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300 2' 9")).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "FixedFodder",
                 time: 300,
@@ -344,9 +344,9 @@ describe("parseFodder", () => {
         ]);
     });
     it("should add a Pot card action to the current wave", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, 'C 300 2" 9')).equal(null);
-        (0, chai_1.expect)(out[1].actions).to.deep.equal([
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, 'C 300 2" 9')).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "FixedFodder",
                 time: 300,
@@ -365,9 +365,9 @@ describe("parseFodder", () => {
         ]);
     });
     it("should add a card action with relative shovel time to the current wave", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300+134 2 9")).equal(null);
-        (0, chai_1.expect)(out[1].actions).to.deep.equal([
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300+134 2 9")).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "FixedFodder",
                 time: 300,
@@ -386,9 +386,9 @@ describe("parseFodder", () => {
         ]);
     });
     it("should add a card action with absolute shovel time to the current wave", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300~600 2 9")).equal(null);
-        (0, chai_1.expect)(out[1].actions).to.deep.equal([
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300~600 2 9")).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "FixedFodder",
                 time: 300,
@@ -407,9 +407,9 @@ describe("parseFodder", () => {
         ]);
     });
     it("should add multiple card actions to the current wave", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300 25 9")).equal(null);
-        (0, chai_1.expect)(out[1].actions).to.deep.equal([
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300 25 9")).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "FixedFodder",
                 time: 300,
@@ -433,9 +433,9 @@ describe("parseFodder", () => {
         ]);
     });
     it("should add extra arguments to the card action", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 2'5 9 choose:2 waves:1")).equal(null);
-        (0, chai_1.expect)(out[1].actions).to.deep.equal([
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C_POS 300 2'5 9 choose:2 waves:1")).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: "SmartFodder",
                 time: 300,
@@ -464,35 +464,35 @@ describe("parseFodder", () => {
 describe('parseJalapeno', () => {
     let out;
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {}, rounds: [[]] };
     });
     it('should return an error if no wave is set', () => {
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 1 1')).to.deep.equal((0, error_1.error)(1, '请先设定波次', 'J 100 1 1'));
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 0, 1, 'J 100 1 1')).to.deep.equal((0, error_1.error)(1, '请先设定波次', 'J 100 1 1'));
     });
     it('should return an error if colToken is missing', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 1')).to.deep.equal((0, error_1.error)(1, '请提供用卡时机, 用卡行, 用卡列', 'J 100 1'));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 0, 1, 'J 100 1')).to.deep.equal((0, error_1.error)(1, '请提供用卡时机, 用卡行, 用卡列', 'J 100 1'));
     });
     it('should return an error if time is invalid', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J -100 1 1')).to.deep.equal((0, error_1.error)(1, '时间应为非负整数', '-100'));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 0, 1, 'J -100 1 1')).to.deep.equal((0, error_1.error)(1, '时间应为非负整数', '-100'));
     });
     it('should return an error if row is not a number', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 a 1')).to.deep.equal((0, error_1.error)(1, '用卡行应为 1~6 内的整数', 'a'));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 0, 1, 'J 100 a 1')).to.deep.equal((0, error_1.error)(1, '用卡行应为 1~6 内的整数', 'a'));
     });
     it('should return an error if row is not within 1-6', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 7 1')).to.deep.equal((0, error_1.error)(1, '用卡行应为 1~6 内的整数', '7'));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 0, 1, 'J 100 7 1')).to.deep.equal((0, error_1.error)(1, '用卡行应为 1~6 内的整数', '7'));
     });
     it('should return an error if col is not within 1~9', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 1 0')).to.deep.equal((0, error_1.error)(1, '用卡列应为 1~9 内的整数', '0'));
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 0, 1, 'J 100 1 0')).to.deep.equal((0, error_1.error)(1, '用卡列应为 1~9 内的整数', '0'));
     });
     it('should add a Jalapeno action to the current wave', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 1 1')).equal(null);
-        (0, chai_1.expect)(out[1]?.actions).to.deep.equal([
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 0, 1, 'J 100 1 1')).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: 'Jalapeno',
                 symbol: 'J',
@@ -502,10 +502,10 @@ describe('parseJalapeno', () => {
         ]);
     });
     it('should add a delayed Jalapeno action to the current wave', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 1 1')).equal(null);
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 2, 'J +134 1 1')).equal(null);
-        (0, chai_1.expect)(out[1]?.actions).to.deep.equal([
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 0, 1, 'J 100 1 1')).equal(null);
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 0, 2, 'J +134 1 1')).equal(null);
+        (0, chai_1.expect)(out.rounds[0][0].actions).to.deep.equal([
             {
                 op: 'Jalapeno',
                 symbol: 'J',
@@ -524,7 +524,7 @@ describe('parseJalapeno', () => {
 describe('parseSet', () => {
     let out;
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {}, rounds: [[]] };
     });
     it('should return an error if variable name is missing', () => {
         (0, chai_1.expect)((0, parser_1.parseSet)(out, 1, 'set'))
@@ -559,7 +559,7 @@ describe('parseSet', () => {
 describe("parseScene", () => {
     let out;
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {}, rounds: [[]] };
     });
     it("should return an error scene is unknown", () => {
         (0, chai_1.expect)((0, parser_1.parseScene)(out, [{ lineNum: 1, line: "scene:AQE" }]))
@@ -567,26 +567,20 @@ describe("parseScene", () => {
     });
     it("should parse scene", () => {
         (0, chai_1.expect)((0, parser_1.parseScene)(out, [{ lineNum: 1, line: "scene:FE" }])).equal(null);
-        (0, chai_1.expect)(out).to.deep.equal({
-            setting: {
-                scene: "FE"
-            }
+        (0, chai_1.expect)(out).to.have.property("setting").that.deep.equal({
+            scene: "FE"
         });
     });
     it("should parse scene case-insensitively", () => {
         (0, chai_1.expect)((0, parser_1.parseScene)(out, [{ lineNum: 1, line: "scene:nE" }])).equal(null);
-        (0, chai_1.expect)(out).to.deep.equal({
-            setting: {
-                scene: "NE"
-            }
+        (0, chai_1.expect)(out).to.have.property("setting").that.deep.equal({
+            scene: "NE"
         });
     });
     it("should parse scene alias", () => {
         (0, chai_1.expect)((0, parser_1.parseScene)(out, [{ lineNum: 1, line: "scene:RE" }])).equal(null);
-        (0, chai_1.expect)(out).to.deep.equal({
-            setting: {
-                scene: "ME"
-            }
+        (0, chai_1.expect)(out).to.have.property("setting").that.deep.equal({
+            scene: "ME"
         });
     });
     it("should return an error if setting args are repeated", () => {
@@ -597,7 +591,7 @@ describe("parseScene", () => {
 describe("parseProtect", () => {
     let out;
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {}, rounds: [[]] };
     });
     it("should return an error if protect is duplicated", () => {
         (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:17")).to.equal(null);
@@ -625,26 +619,24 @@ describe("parseProtect", () => {
             .to.deep.equal((0, error_1.error)(1, "普通植物所在列应为 1~9 内的整数", "0"));
     });
     it("should return an error if positions are repeated", () => {
-        (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {} }, 1, "protect:18 18"))
+        (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {}, rounds: [] }, 1, "protect:18 18"))
             .to.deep.equal((0, error_1.error)(1, "保护位置重叠", "18"));
-        (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {} }, 1, "protect:19' 18"))
+        (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {}, rounds: [] }, 1, "protect:19' 18"))
             .to.deep.equal((0, error_1.error)(1, "保护位置重叠", "18"));
     });
     it("should parse protect positions", () => {
         (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:18 29'")).equal(null);
-        (0, chai_1.expect)(out).to.deep.equal({
-            setting: {
-                protect: [{
-                        type: "Cob",
-                        row: 1,
-                        col: 8,
-                    },
-                    {
-                        type: "Normal",
-                        row: 2,
-                        col: 9,
-                    }],
-            }
+        (0, chai_1.expect)(out).to.have.property("setting").that.deep.equal({
+            protect: [{
+                    type: "Cob",
+                    row: 1,
+                    col: 8,
+                },
+                {
+                    type: "Normal",
+                    row: 2,
+                    col: 9,
+                }],
         });
     });
 });
@@ -673,10 +665,16 @@ describe("parseIntArg", () => {
 });
 describe("parse", () => {
     it("should return empty object if input is empty", () => {
+        console.log((0, parser_1.parse)(""));
         (0, chai_1.expect)((0, parser_1.parse)(""))
             .to.have.property("out").that.deep.equal({
             setting: { scene: "FE" },
+            rounds: [[]],
         });
+    });
+    it("should return an erorr if cob is used before wave", () => {
+        (0, chai_1.expect)((0, parser_1.parse)("P 300 2 9\nw1 601"))
+            .to.deep.equal((0, error_1.error)(1, "请先设定波次", "P 300 2 9"));
     });
     it("should return an erorr if cannot expand lines", () => {
         (0, chai_1.expect)((0, parser_1.parse)("w1~0 601"))
@@ -694,195 +692,195 @@ describe("parse", () => {
         (0, chai_1.expect)((0, parser_1.parse)("\nw1 601\nP 300 2 9\nC +134+134 5 9\n"))
             .to.have.property("out").that.deep.equal({
             setting: { scene: "FE" },
-            1: {
-                iceTimes: [],
-                waveLength: 601,
-                actions: [
-                    {
-                        op: "Cob",
-                        time: 300,
-                        symbol: "P",
-                        positions: [
+            rounds: [[{
+                        iceTimes: [],
+                        waveLength: 601,
+                        actions: [
                             {
-                                row: 2,
-                                col: 9,
-                            }
-                        ],
-                        cobCol: undefined
-                    },
-                    {
-                        op: "FixedFodder",
-                        time: 300 + 134,
-                        symbol: "C",
-                        shovelTime: 300 + 134 + 134,
-                        fodders: [
-                            "Normal",
-                        ],
-                        positions: [
+                                op: "Cob",
+                                time: 300,
+                                symbol: "P",
+                                positions: [
+                                    {
+                                        row: 2,
+                                        col: 9,
+                                    }
+                                ],
+                                cobCol: undefined
+                            },
                             {
-                                row: 5,
-                                col: 9,
-                            }
-                        ]
-                    },
-                ],
-                startTick: undefined,
-            },
+                                op: "FixedFodder",
+                                time: 300 + 134,
+                                symbol: "C",
+                                shovelTime: 300 + 134 + 134,
+                                fodders: [
+                                    "Normal",
+                                ],
+                                positions: [
+                                    {
+                                        row: 5,
+                                        col: 9,
+                                    }
+                                ]
+                            },
+                        ],
+                        startTick: undefined,
+                    }]],
         });
     });
     it("should parse a single wave with a smart fodder", () => {
         (0, chai_1.expect)((0, parser_1.parse)("w1 601\nC_POS 300~500 25 9 choose:1"))
             .to.have.property("out").that.deep.equal({
             setting: { scene: "FE" },
-            1: {
-                iceTimes: [],
-                waveLength: 601,
-                actions: [
-                    {
-                        op: "SmartFodder",
-                        time: 300,
-                        symbol: "C_POS",
-                        shovelTime: 500,
-                        fodders: [
-                            "Normal",
-                            "Normal",
-                        ],
-                        positions: [
+            rounds: [[{
+                        iceTimes: [],
+                        waveLength: 601,
+                        actions: [
                             {
-                                row: 2,
-                                col: 9,
-                            },
-                            {
-                                row: 5,
-                                col: 9,
+                                op: "SmartFodder",
+                                time: 300,
+                                symbol: "C_POS",
+                                shovelTime: 500,
+                                fodders: [
+                                    "Normal",
+                                    "Normal",
+                                ],
+                                positions: [
+                                    {
+                                        row: 2,
+                                        col: 9,
+                                    },
+                                    {
+                                        row: 5,
+                                        col: 9,
+                                    },
+                                ],
+                                choose: 1,
+                                waves: [],
                             },
                         ],
-                        choose: 1,
-                        waves: [],
-                    },
-                ],
-                startTick: undefined,
-            },
+                        startTick: undefined,
+                    }]]
         });
     });
     it("should parse a single wave with jalapeno", () => {
         (0, chai_1.expect)((0, parser_1.parse)("w1 601\nJ 300 2 9"))
             .to.have.property("out").that.deep.equal({
             setting: { scene: "FE" },
-            1: {
-                iceTimes: [],
-                waveLength: 601,
-                actions: [
-                    {
-                        op: "Jalapeno",
-                        time: 300,
-                        symbol: "J",
-                        position: {
-                            row: 2,
-                            col: 9
-                        }
-                    },
-                ],
-                startTick: undefined,
-            },
+            rounds: [[{
+                        iceTimes: [],
+                        waveLength: 601,
+                        actions: [
+                            {
+                                op: "Jalapeno",
+                                time: 300,
+                                symbol: "J",
+                                position: {
+                                    row: 2,
+                                    col: 9
+                                }
+                            },
+                        ],
+                        startTick: undefined,
+                    }]]
         });
     });
     it("should parse expanded waves with variables", () => {
         (0, chai_1.expect)((0, parser_1.parse)("SET x 300\nw1~2 601\nP x 2 9 \nSET x x+100"))
             .to.have.property("out").that.deep.equal({
             setting: { scene: "FE" },
-            1: {
-                iceTimes: [],
-                waveLength: 601,
-                actions: [
-                    {
-                        op: "Cob",
-                        time: 300,
-                        symbol: "P",
-                        positions: [
+            rounds: [[{
+                        iceTimes: [],
+                        waveLength: 601,
+                        actions: [
                             {
-                                row: 2,
-                                col: 9,
-                            }
+                                op: "Cob",
+                                time: 300,
+                                symbol: "P",
+                                positions: [
+                                    {
+                                        row: 2,
+                                        col: 9,
+                                    }
+                                ],
+                                cobCol: undefined
+                            },
                         ],
-                        cobCol: undefined
+                        startTick: undefined,
                     },
-                ],
-                startTick: undefined,
-            },
-            2: {
-                iceTimes: [],
-                waveLength: 601,
-                actions: [
                     {
-                        op: "Cob",
-                        time: 300 + 100,
-                        symbol: "P",
-                        positions: [
+                        iceTimes: [],
+                        waveLength: 601,
+                        actions: [
                             {
-                                row: 2,
-                                col: 9,
-                            }
+                                op: "Cob",
+                                time: 300 + 100,
+                                symbol: "P",
+                                positions: [
+                                    {
+                                        row: 2,
+                                        col: 9,
+                                    }
+                                ],
+                                cobCol: undefined
+                            },
                         ],
-                        cobCol: undefined
-                    },
-                ],
-                startTick: undefined,
-            },
+                        startTick: undefined,
+                    }]]
         });
     });
     it("should parse multiple waves with metadata", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("repeat:10\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 3 4 choose:1 waves:12\n"))
+        (0, chai_1.expect)((0, parser_1.parse)("repeat:10\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 3 4 choose:1 waves:1,2\n"))
             .to.deep.equal({
             out: {
                 setting: { scene: "FE" },
-                1: {
-                    iceTimes: [],
-                    waveLength: 601,
-                    actions: [
-                        {
-                            op: "Cob",
-                            time: 300,
-                            symbol: "PP",
-                            positions: [
+                rounds: [[{
+                            iceTimes: [],
+                            waveLength: 601,
+                            actions: [
                                 {
-                                    row: 2,
-                                    col: 9,
-                                },
-                                {
-                                    row: 5,
-                                    col: 9,
+                                    op: "Cob",
+                                    time: 300,
+                                    symbol: "PP",
+                                    positions: [
+                                        {
+                                            row: 2,
+                                            col: 9,
+                                        },
+                                        {
+                                            row: 5,
+                                            col: 9,
+                                        }
+                                    ],
+                                    cobCol: undefined
                                 }
                             ],
-                            cobCol: undefined
-                        }
-                    ],
-                    startTick: undefined,
-                },
-                2: {
-                    iceTimes: [1],
-                    waveLength: 1250,
-                    actions: [
+                            startTick: undefined,
+                        },
                         {
-                            op: "SmartFodder",
-                            time: 400,
-                            symbol: "C_POS",
-                            shovelTime: 400 + 134,
-                            fodders: [
-                                "Normal",
-                            ],
-                            positions: [
+                            iceTimes: [1],
+                            waveLength: 1250,
+                            actions: [
                                 {
-                                    row: 3,
-                                    col: 4,
+                                    op: "SmartFodder",
+                                    time: 400,
+                                    symbol: "C_POS",
+                                    shovelTime: 400 + 134,
+                                    fodders: [
+                                        "Normal",
+                                    ],
+                                    positions: [
+                                        {
+                                            row: 3,
+                                            col: 4,
+                                        },
+                                    ],
+                                    choose: 1,
+                                    waves: [1, 2],
                                 },
                             ],
-                            choose: 1,
-                            waves: [1, 2],
-                        },
-                    ],
-                    startTick: undefined,
-                },
+                            startTick: undefined,
+                        }]]
             }, args: {
                 repeat: ["-r", "10"],
             }
@@ -892,25 +890,25 @@ describe("parse", () => {
         (0, chai_1.expect)((0, parser_1.parse)("w1 1 601 # this is a comment\nP 300 2 9\n"))
             .to.have.property("out").that.deep.equal({
             setting: { scene: "FE" },
-            1: {
-                iceTimes: [1],
-                waveLength: 601,
-                actions: [
-                    {
-                        op: "Cob",
-                        symbol: "P",
-                        time: 300,
-                        positions: [
+            rounds: [[{
+                        iceTimes: [1],
+                        waveLength: 601,
+                        actions: [
                             {
-                                row: 2,
-                                col: 9,
-                            }
+                                op: "Cob",
+                                symbol: "P",
+                                time: 300,
+                                positions: [
+                                    {
+                                        row: 2,
+                                        col: 9,
+                                    }
+                                ],
+                                cobCol: undefined
+                            },
                         ],
-                        cobCol: undefined
-                    },
-                ],
-                startTick: undefined,
-            },
+                        startTick: undefined,
+                    }]],
         });
     });
     it("should return an error for an unknown symbol", () => {
@@ -926,27 +924,37 @@ describe('expandLines', () => {
     it('should expand a single wave line', () => {
         const input = ['w1 # comment', 'a b c'];
         (0, chai_1.expect)((0, parser_1.expandLines)(input))
-            .to.deep.equal([
-            { lineNum: 1, line: "w1" },
-            { lineNum: 2, line: "a b c" },
+            .to.have.property("lines").that.deep.equal([
+            { lineNum: 1, line: "w1", round: 0 },
+            { lineNum: 2, line: "a b c", round: 0 },
         ]);
     });
     it('should expand multiple wave lines', () => {
         const input = ['w1~3 # comment', 'a b c', 'd e f', 'g h i'];
         (0, chai_1.expect)((0, parser_1.expandLines)(input))
-            .to.deep.equal([
-            { lineNum: 1, line: 'w1' },
-            { lineNum: 2, line: 'a b c' },
-            { lineNum: 3, line: 'd e f' },
-            { lineNum: 4, line: 'g h i' },
-            { lineNum: 1, line: 'w2' },
-            { lineNum: 2, line: 'a b c' },
-            { lineNum: 3, line: 'd e f' },
-            { lineNum: 4, line: 'g h i' },
-            { lineNum: 1, line: 'w3' },
-            { lineNum: 2, line: 'a b c' },
-            { lineNum: 3, line: 'd e f' },
-            { lineNum: 4, line: 'g h i' },
+            .to.have.property("lines").that.deep.equal([
+            { lineNum: 1, line: 'w1', round: 0 },
+            { lineNum: 2, line: 'a b c', round: 0 },
+            { lineNum: 3, line: 'd e f', round: 0 },
+            { lineNum: 4, line: 'g h i', round: 0 },
+            { lineNum: 1, line: 'w2', round: 0 },
+            { lineNum: 2, line: 'a b c', round: 0 },
+            { lineNum: 3, line: 'd e f', round: 0 },
+            { lineNum: 4, line: 'g h i', round: 0 },
+            { lineNum: 1, line: 'w3', round: 0 },
+            { lineNum: 2, line: 'a b c', round: 0 },
+            { lineNum: 3, line: 'd e f', round: 0 },
+            { lineNum: 4, line: 'g h i', round: 0 },
+        ]);
+    });
+    it('should expand duplicates', () => {
+        const input = ['duplicate:2', 'SET x 200', 'w1 P 300 2 9'];
+        (0, chai_1.expect)((0, parser_1.expandLines)(input))
+            .to.have.property("lines").that.deep.equal([
+            { lineNum: 1, line: 'duplicate:2' },
+            { lineNum: 2, line: 'SET x 200' },
+            { lineNum: 3, line: 'w1 P 300 2 9', round: 0 },
+            { lineNum: 3, line: 'w1 P 300 2 9', round: 1 },
         ]);
     });
     it('should handle invalid wave syntax', () => {
@@ -959,11 +967,21 @@ describe('expandLines', () => {
         (0, chai_1.expect)((0, parser_1.expandLines)(input))
             .to.deep.equal((0, error_1.error)(1, '起始波数应大于终止波数', 'w3~1'));
     });
+    it('should return an error if duplicate is duplicate', () => {
+        const input = ['duplicate:2', 'duplicate:3'];
+        (0, chai_1.expect)((0, parser_1.expandLines)(input))
+            .to.deep.equal((0, error_1.error)(2, 'duplicate 重复', 'duplicate:3'));
+    });
+    it('should return an error if duplicate is not positive', () => {
+        const input = ['duplicate:0'];
+        (0, chai_1.expect)((0, parser_1.expandLines)(input))
+            .to.deep.equal((0, error_1.error)(1, 'duplicate 的值应为正整数', 'duplicate:0'));
+    });
 });
 describe('replaceVariables', () => {
     let out;
     beforeEach(() => {
-        out = { setting: {} };
+        out = { setting: {}, rounds: [[]] };
     });
     it('should return the original line if variables are not defined', () => {
         const line = 'SET $a 1';
