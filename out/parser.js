@@ -30,18 +30,29 @@ function parseWave(out, lineNum, line) {
         }
         return iceTimes;
     };
-    const parseWaveLength = (waveLengthToken) => {
+    const parseWaveRange = (waveRangeToken) => {
+        const [startTickToken, waveLengthToken] = waveRangeToken.includes("~")
+            ? [waveRangeToken.split("~")[0], waveRangeToken.split("~")[1]]
+            : [undefined, waveRangeToken];
         const waveLength = (0, string_1.parseNatural)(waveLengthToken);
         if (waveLength === null || waveLength < 601) {
-            return (0, error_1.error)(lineNum, "波长应为 >= 601 的整数", waveLengthToken);
+            return (0, error_1.error)(lineNum, "波长应为 >= 601 的整数", waveRangeToken);
         }
-        return waveLength;
+        let startTick;
+        if (startTickToken !== undefined) {
+            let parsedStartTick = (0, string_1.parseNatural)(startTickToken);
+            if (parsedStartTick === null || parsedStartTick > waveLength) {
+                return (0, error_1.error)(lineNum, "起始时刻应 <= 波长", startTickToken);
+            }
+            startTick = parsedStartTick;
+        }
+        return { waveLength, startTick };
     };
     const tokens = line.split(" ");
     if (tokens.length < 2) {
         return (0, error_1.error)(lineNum, "请提供波长", line);
     }
-    const waveNumToken = tokens[0], iceTimeTokens = tokens.slice(1, -1), waveLengthToken = tokens[tokens.length - 1];
+    const waveNumToken = tokens[0], iceTimeTokens = tokens.slice(1, -1), waveRangeToken = tokens[tokens.length - 1];
     const waveNum = parseWaveNum(waveNumToken);
     if ((0, error_1.isError)(waveNum)) {
         return waveNum;
@@ -57,15 +68,16 @@ function parseWave(out, lineNum, line) {
     if ((0, error_1.isError)(iceTimes)) {
         return iceTimes;
     }
-    const waveLength = parseWaveLength(waveLengthToken);
-    if ((0, error_1.isError)(waveLength)) {
-        return waveLength;
+    const parsedWaveRange = parseWaveRange(waveRangeToken);
+    if ((0, error_1.isError)(parsedWaveRange)) {
+        return parsedWaveRange;
     }
+    const { waveLength, startTick } = parsedWaveRange;
     const lastIceTime = iceTimes[iceTimes.length - 1];
     if (lastIceTime !== undefined && waveLength < lastIceTime) {
         return (0, error_1.error)(lineNum, "波长应 >= 最后一次用冰时机", line);
     }
-    out[waveNum] = { iceTimes: iceTimes, waveLength: waveLength, actions: [] };
+    out[waveNum] = { iceTimes: iceTimes, waveLength: waveLength, actions: [], startTick };
     return null;
 }
 exports.parseWave = parseWave;
@@ -116,14 +128,8 @@ function parseCob(out, lineNum, line, cobNum) {
     };
     const tokens = line.split(" ");
     const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3];
-    if (timeToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供炮生效时机", line);
-    }
-    if (rowsToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供落点行", line);
-    }
-    if (colToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供落点列", line);
+    if (timeToken === undefined || rowsToken === undefined || colToken === undefined) {
+        return (0, error_1.error)(lineNum, "请提供炮生效时机, 落点行, 落点列", line);
     }
     let cobCol;
     if (/\d$/.test(symbol)) {
@@ -138,7 +144,7 @@ function parseCob(out, lineNum, line, cobNum) {
     }
     else {
         if (out.setting.scene === "ME") {
-            return (0, error_1.error)(lineNum, "屋顶场合请提供落点列", line);
+            return (0, error_1.error)(lineNum, "屋顶场合请提供落点列", symbol);
         }
     }
     const time = parseTime(lineNum, timeToken, currWave.actions[currWave.actions.length - 1]?.time);
@@ -163,36 +169,6 @@ function parseCob(out, lineNum, line, cobNum) {
     return null;
 }
 exports.parseCob = parseCob;
-function parseCardAndShovelTime(lineNum, timesToken, currWave) {
-    let cardTimeToken;
-    let shovelTimeToken;
-    const delimIndex = Math.max(timesToken.lastIndexOf("+"), timesToken.lastIndexOf("~"));
-    if (delimIndex <= 0) { // if starts with "+" (delimIndex is 0), still ignore it
-        cardTimeToken = timesToken;
-    }
-    else {
-        cardTimeToken = timesToken.slice(0, delimIndex);
-        shovelTimeToken = (0, string_1.chopPrefix)(timesToken.slice(delimIndex), "~")[0];
-    }
-    const cardTime = parseTime(lineNum, cardTimeToken, currWave.actions.slice(-1)[0]?.time);
-    if ((0, error_1.isError)(cardTime)) {
-        return cardTime;
-    }
-    if (shovelTimeToken === undefined) {
-        return [cardTime, null];
-    }
-    else {
-        const shovelTime = parseTime(lineNum, shovelTimeToken, cardTime);
-        if ((0, error_1.isError)(shovelTime)) {
-            return shovelTime;
-        }
-        if (shovelTime < cardTime) {
-            return (0, error_1.error)(lineNum, "铲除时机不可早于用垫时机", shovelTimeToken);
-        }
-        return [cardTime, shovelTime];
-    }
-}
-;
 function parseCardCol(lineNum, colToken, desc) {
     const col = (0, string_1.parseNatural)(colToken);
     if (col === null || col < 1 || col > 9) {
@@ -206,6 +182,35 @@ function parseFodder(out, lineNum, line) {
     if (currWaveNum === undefined || currWave === undefined) {
         return (0, error_1.error)(lineNum, "请先设定波次", line);
     }
+    const parseTimes = (lineNum, timesToken, currWave) => {
+        let cardTimeToken;
+        let shovelTimeToken;
+        const delimIndex = Math.max(timesToken.lastIndexOf("+"), timesToken.lastIndexOf("~"));
+        if (delimIndex <= 0) { // if starts with "+" (delimIndex is 0), still ignore it
+            cardTimeToken = timesToken;
+        }
+        else {
+            cardTimeToken = timesToken.slice(0, delimIndex);
+            shovelTimeToken = (0, string_1.chopPrefix)(timesToken.slice(delimIndex), "~")[0];
+        }
+        const cardTime = parseTime(lineNum, cardTimeToken, currWave.actions.slice(-1)[0]?.time);
+        if ((0, error_1.isError)(cardTime)) {
+            return cardTime;
+        }
+        if (shovelTimeToken === undefined) {
+            return [cardTime, null];
+        }
+        else {
+            const shovelTime = parseTime(lineNum, shovelTimeToken, cardTime);
+            if ((0, error_1.isError)(shovelTime)) {
+                return shovelTime;
+            }
+            if (shovelTime < cardTime) {
+                return (0, error_1.error)(lineNum, "铲除时机不可早于用垫时机", shovelTimeToken);
+            }
+            return [cardTime, shovelTime];
+        }
+    };
     const parseRows = (rowsToken) => {
         const rows = [];
         let skip = false;
@@ -286,16 +291,10 @@ function parseFodder(out, lineNum, line) {
     };
     const tokens = line.split(" ");
     const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3], fodderArgTokens = tokens.slice(4);
-    if (timeToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供用垫时机", line);
+    if (timeToken === undefined || rowsToken === undefined || colToken === undefined) {
+        return (0, error_1.error)(lineNum, "请提供用垫时机, 用垫行, 用垫列", line);
     }
-    if (rowsToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供用垫行", line);
-    }
-    if (colToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供用垫列", line);
-    }
-    const times = parseCardAndShovelTime(lineNum, timeToken, currWave);
+    const times = parseTimes(lineNum, timeToken, currWave);
     if ((0, error_1.isError)(times)) {
         return times;
     }
@@ -354,14 +353,8 @@ function parseJalapeno(out, lineNum, line) {
     };
     const tokens = line.split(" ");
     const symbol = tokens[0], timeToken = tokens[1], rowToken = tokens[2], colToken = tokens[3];
-    if (timeToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供用卡时机", line);
-    }
-    if (rowToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供用卡行", line);
-    }
-    if (colToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供用卡列", line);
+    if (timeToken === undefined || rowToken === undefined || colToken === undefined) {
+        return (0, error_1.error)(lineNum, "请提供用卡时机, 用卡行, 用卡列", line);
     }
     const time = parseTime(lineNum, timeToken, currWave.actions.slice(-1)[0]?.time);
     if ((0, error_1.isError)(time)) {

@@ -12,10 +12,6 @@ describe("parseCob", () => {
     it("should return an error if no wave is set", () => {
         (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 9", 1)).to.deep.equal((0, error_1.error)(1, "请先设定波次", "P 300 2 9"));
     });
-    it("should return an error if time is missing", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P", 1)).to.deep.equal((0, error_1.error)(1, "请提供炮生效时机", "P"));
-    });
     it("should return an error if time is negative", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P -1 2 9", 1)).to.deep.equal((0, error_1.error)(1, "时间应为非负整数", "-1"));
@@ -24,17 +20,13 @@ describe("parseCob", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P +220 2 9", 1)).to.deep.equal((0, error_1.error)(1, "没有延迟基准", "+220"));
     });
-    it("should return an error if rows are missing", () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300", 1)).to.deep.equal((0, error_1.error)(1, "请提供落点行", "P 300"));
-    });
     it("should return an error if number of rows dooes not match expected number of cobs", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "PP 300 2 9", 2)).to.deep.equal((0, error_1.error)(1, "请提供 2 个落点行", "2"));
     });
     it("should return an error if colToken is missing", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2", 1)).to.deep.equal((0, error_1.error)(1, "请提供落点列", "P 300 2"));
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2", 1)).to.deep.equal((0, error_1.error)(1, "请提供炮生效时机, 落点行, 落点列", "P 300 2"));
     });
     it("should return an error if row is not a number", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
@@ -52,6 +44,20 @@ describe("parseCob", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 11", 1)).to.deep.equal((0, error_1.error)(1, "落点列应为 0.0~10.0 内的数字", "11"));
     });
+    it("should return an error if cob col is specified for non-roof scenes", () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P3 300 2 11", 1)).to.deep.equal((0, error_1.error)(1, "只有屋顶场合可以指定炮尾列", "P3"));
+    });
+    it("should return an error if cob col is not specified for roof scenes", () => {
+        out.setting.scene = "ME";
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 9", 1)).to.deep.equal((0, error_1.error)(1, "屋顶场合请提供落点列", "P"));
+    });
+    it("should return an error if specified cob col is invalid", () => {
+        out.setting.scene = "ME";
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P0 300 2 11", 1)).to.deep.equal((0, error_1.error)(1, "炮尾列应为 1~8 内的整数", "0"));
+    });
     it("should add a Cob action to the current wave", () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 9", 1)).equal(null);
@@ -65,6 +71,23 @@ describe("parseCob", () => {
                         col: 9,
                     }],
                 cobCol: undefined
+            },
+        ]);
+    });
+    it("should add a Cob action to the current wave with specified cob col", () => {
+        out.setting.scene = "ME";
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P3 300 2 9", 1)).equal(null);
+        (0, chai_1.expect)(out[1]?.actions).to.deep.equal([
+            {
+                op: "Cob",
+                time: 300,
+                symbol: "P3",
+                positions: [{
+                        row: 2,
+                        col: 9,
+                    }],
+                cobCol: 3
             },
         ]);
     });
@@ -126,6 +149,16 @@ describe('parseWave', () => {
             iceTimes: [100, 200, 300],
             waveLength: 601,
             actions: [],
+            startTick: undefined,
+        });
+    });
+    it('should parse valid wave with start tick', () => {
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 100 200 300 300~601')).equal(null);
+        (0, chai_1.expect)(out[1]).to.deep.equal({
+            iceTimes: [100, 200, 300],
+            waveLength: 601,
+            actions: [],
+            startTick: 300,
         });
     });
     it('should return an error for invalid wave number', () => {
@@ -157,6 +190,10 @@ describe('parseWave', () => {
         (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w2 601'))
             .to.deep.equal((0, error_1.error)(1, '请先设定第 1 波', 'w2'));
     });
+    it('should return an error if start tick is invalid', () => {
+        (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 602~601'))
+            .to.deep.equal((0, error_1.error)(1, '起始时刻应 <= 波长', '602'));
+    });
 });
 describe("parseFodder", () => {
     let out;
@@ -166,11 +203,6 @@ describe("parseFodder", () => {
     it("should return an error if no wave has been set", () => {
         (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300 2 9"))
             .to.deep.equal((0, error_1.error)(1, "请先设定波次", "C 300 2 9"));
-    });
-    it("should return an error if time is missing", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C"))
-            .to.deep.equal((0, error_1.error)(1, "请提供用垫时机", "C"));
     });
     it("should return an error if delay is used without context", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
@@ -187,15 +219,10 @@ describe("parseFodder", () => {
         (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300~299 2 9"))
             .to.deep.equal((0, error_1.error)(1, "铲除时机不可早于用垫时机", "299"));
     });
-    it("should return an error if rows are missing", () => {
-        out[1] = { iceTimes: [], waveLength: 0, actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300"))
-            .to.deep.equal((0, error_1.error)(1, "请提供用垫行", "C 300"));
-    });
     it("should return an error if colToken is missing", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
         (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C 300 2"))
-            .to.deep.equal((0, error_1.error)(1, "请提供用垫列", "C 300 2"));
+            .to.deep.equal((0, error_1.error)(1, "请提供用垫时机, 用垫行, 用垫列", "C 300 2"));
     });
     it("should return an error if rows are invalid", () => {
         out[1] = { iceTimes: [], waveLength: 0, actions: [] };
@@ -442,17 +469,13 @@ describe('parseJalapeno', () => {
     it('should return an error if no wave is set', () => {
         (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 1 1')).to.deep.equal((0, error_1.error)(1, '请先设定波次', 'J 100 1 1'));
     });
-    it('should return an error if timeToken is missing', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J')).to.deep.equal((0, error_1.error)(1, '请提供用卡时机', 'J'));
-    });
-    it('should return an error if rowToken is missing', () => {
-        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100')).to.deep.equal((0, error_1.error)(1, '请提供用卡行', 'J 100'));
-    });
     it('should return an error if colToken is missing', () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 1')).to.deep.equal((0, error_1.error)(1, '请提供用卡列', 'J 100 1'));
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J 100 1')).to.deep.equal((0, error_1.error)(1, '请提供用卡时机, 用卡行, 用卡列', 'J 100 1'));
+    });
+    it('should return an error if time is invalid', () => {
+        out[1] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseJalapeno)(out, 1, 'J -100 1 1')).to.deep.equal((0, error_1.error)(1, '时间应为非负整数', '-100'));
     });
     it('should return an error if row is not a number', () => {
         out[1] = { waveLength: 601, iceTimes: [], actions: [] };
@@ -655,6 +678,10 @@ describe("parse", () => {
             setting: { scene: "FE" },
         });
     });
+    it("should return an erorr if cannot expand lines", () => {
+        (0, chai_1.expect)((0, parser_1.parse)("w1~0 601"))
+            .to.deep.equal((0, error_1.error)(1, "起始波数应大于终止波数", "w1~0"));
+    });
     it("should use scene information to deduce max rows", () => {
         (0, chai_1.expect)((0, parser_1.parse)("protect:68\nscene:DE"))
             .to.deep.equal((0, error_1.error)(1, "保护行应为 1~5 内的整数", "6"));
@@ -699,10 +726,11 @@ describe("parse", () => {
                         ]
                     },
                 ],
+                startTick: undefined,
             },
         });
     });
-    it("should parse a single wave (lowercase) with a smart fodder", () => {
+    it("should parse a single wave with a smart fodder", () => {
         (0, chai_1.expect)((0, parser_1.parse)("w1 601\nC_POS 300~500 25 9 choose:1"))
             .to.have.property("out").that.deep.equal({
             setting: { scene: "FE" },
@@ -733,6 +761,73 @@ describe("parse", () => {
                         waves: [],
                     },
                 ],
+                startTick: undefined,
+            },
+        });
+    });
+    it("should parse a single wave with jalapeno", () => {
+        (0, chai_1.expect)((0, parser_1.parse)("w1 601\nJ 300 2 9"))
+            .to.have.property("out").that.deep.equal({
+            setting: { scene: "FE" },
+            1: {
+                iceTimes: [],
+                waveLength: 601,
+                actions: [
+                    {
+                        op: "Jalapeno",
+                        time: 300,
+                        symbol: "J",
+                        position: {
+                            row: 2,
+                            col: 9
+                        }
+                    },
+                ],
+                startTick: undefined,
+            },
+        });
+    });
+    it("should parse expanded waves with variables", () => {
+        (0, chai_1.expect)((0, parser_1.parse)("SET x 300\nw1~2 601\nP x 2 9 \nSET x x+100"))
+            .to.have.property("out").that.deep.equal({
+            setting: { scene: "FE" },
+            1: {
+                iceTimes: [],
+                waveLength: 601,
+                actions: [
+                    {
+                        op: "Cob",
+                        time: 300,
+                        symbol: "P",
+                        positions: [
+                            {
+                                row: 2,
+                                col: 9,
+                            }
+                        ],
+                        cobCol: undefined
+                    },
+                ],
+                startTick: undefined,
+            },
+            2: {
+                iceTimes: [],
+                waveLength: 601,
+                actions: [
+                    {
+                        op: "Cob",
+                        time: 300 + 100,
+                        symbol: "P",
+                        positions: [
+                            {
+                                row: 2,
+                                col: 9,
+                            }
+                        ],
+                        cobCol: undefined
+                    },
+                ],
+                startTick: undefined,
             },
         });
     });
@@ -762,6 +857,7 @@ describe("parse", () => {
                             cobCol: undefined
                         }
                     ],
+                    startTick: undefined,
                 },
                 2: {
                     iceTimes: [1],
@@ -785,6 +881,7 @@ describe("parse", () => {
                             waves: [1, 2],
                         },
                     ],
+                    startTick: undefined,
                 },
             }, args: {
                 repeat: ["-r", "10"],
@@ -812,6 +909,7 @@ describe("parse", () => {
                         cobCol: undefined
                     },
                 ],
+                startTick: undefined,
             },
         });
     });
