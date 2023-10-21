@@ -121,6 +121,40 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(testSmashCmd);
 
+	let testExplodeCmd = vscode.commands.registerCommand('seml.testExplode', () => {
+		const editor = vscode.window.activeTextEditor;
+		if (editor === undefined) {
+			return;
+		}
+
+		const compiiledJson = compileToJson(editor.document);
+		if (compiiledJson === undefined) {
+			return;
+		}
+
+		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiiledJson;
+
+		const destDirName = path.join(dirName, "dest");
+		if (!fs.existsSync(destDirName)) {
+			fs.mkdirSync(destDirName);
+		}
+
+		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
+			if (err) {
+				vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
+				return;
+			}
+
+			runBinary('explode_test.exe',
+				[...Object.values(args).flatMap(x => x),
+					"-f", jsonFilePath,
+					"-o", path.join(destDirName, baseName + "_explode")],
+				jsonFilePath);
+		});
+	});
+
+	context.subscriptions.push(testExplodeCmd);
+
 }
 
 export function deactivate() { }

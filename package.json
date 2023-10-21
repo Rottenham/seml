@@ -41,6 +41,10 @@
         "title": "Seml: 测试砸率"
       },
       {
+        "command": "seml.testExplode",
+        "title": "Seml: 测试炮伤"
+      },
+      {
         "command": "seml.compileToJson",
         "title": "Seml: 导出为 JSON"
       }

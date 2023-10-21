@@ -496,7 +496,7 @@ function parse(text) {
         return parseResult;
     }
     for (let { lineNum, line, round } of lines) {
-        if (line.length > 0 && !line.startsWith("scene:")) {
+        if (line.length > 0 && !line.startsWith("scene:") && !line.startsWith("duplicate:")) {
             line = replaceVariables(out, line);
             const symbol = line.split(" ")[0];
             let parseResult = null;
