@@ -55,7 +55,7 @@
     "url": "https://github.com/Rottenham/seml"
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run compile && .\\copy_binaries.bat",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
