@@ -122,6 +122,31 @@ function activate(context) {
         });
     });
     context.subscriptions.push(testExplodeCmd);
+    let testPogoCmd = vscode.commands.registerCommand('seml.testPogo', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor === undefined) {
+            return;
+        }
+        const compiiledJson = compileToJson(editor.document);
+        if (compiiledJson === undefined) {
+            return;
+        }
+        const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiiledJson;
+        const destDirName = path.join(dirName, "dest");
+        if (!fs.existsSync(destDirName)) {
+            fs.mkdirSync(destDirName);
+        }
+        fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
+            if (err) {
+                vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
+                return;
+            }
+            runBinary('pogo_test.exe', [...Object.values(args).flatMap(x => x),
+                "-f", jsonFilePath,
+                "-o", path.join(destDirName, baseName + "_pogo")], jsonFilePath);
+        });
+    });
+    context.subscriptions.push(testPogoCmd);
 }
 exports.activate = activate;
 function deactivate() { }

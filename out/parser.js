@@ -459,8 +459,16 @@ function parseProtect(out, lineNum, line) {
             return (0, error_1.error)(lineNum, `${isNormal ? "普通植物" : "炮"}所在列应为 ${minCol}~9 内的整数`, colToken);
         }
         const pos = { type: isNormal ? "Normal" : "Cob", row, col };
-        if (out.setting.protect.map(pos => pos.row).includes(row)) {
-            return (0, error_1.error)(lineNum, "保护位置重叠", posToken);
+        for (const prevPos of out.setting.protect) {
+            if (prevPos.row === pos.row) {
+                for (const prevCol of (prevPos.type === "Normal" ? [prevPos.col] : [prevPos.col - 1, prevPos.col])) {
+                    for (const col of (pos.type === "Normal" ? [pos.col] : [pos.col - 1, pos.col])) {
+                        if (prevCol === col) {
+                            return (0, error_1.error)(lineNum, "保护位置重叠", posToken);
+                        }
+                    }
+                }
+            }
         }
         out.setting.protect.push(pos);
     }

@@ -593,8 +593,16 @@ export function parseProtect(out: ParserOutput, lineNum: number, line: string): 
 
 		const pos: ProtectPos = { type: isNormal ? "Normal" : "Cob", row, col };
 
-		if (out.setting.protect.map(pos => pos.row).includes(row)) {
-			return error(lineNum, "保护位置重叠", posToken);
+		for (const prevPos of out.setting.protect) {
+			if (prevPos.row === pos.row) {
+				for (const prevCol of (prevPos.type === "Normal" ? [prevPos.col] : [prevPos.col - 1, prevPos.col])) {
+					for (const col of (pos.type === "Normal" ? [pos.col] : [pos.col - 1, pos.col])) {
+						if (prevCol === col) {
+							return error(lineNum, "保护位置重叠", posToken);
+						}
+					}
+				}
+			}
 		}
 
 		out.setting.protect.push(pos);

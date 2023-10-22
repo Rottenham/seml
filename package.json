@@ -37,6 +37,10 @@
     ],
     "commands": [
       {
+        "command": "seml.compileToJson",
+        "title": "Seml: 导出为 JSON (compile to JSON)"
+      },
+      {
         "command": "seml.testSmash",
         "title": "Seml: 测试砸率 (test smash rate)"
       },
@@ -45,8 +49,8 @@
         "title": "Seml: 测试炮伤 (test loss)"
       },
       {
-        "command": "seml.compileToJson",
-        "title": "Seml: 导出为 JSON (export as JSON)"
+        "command": "seml.testPogo",
+        "title": "Seml: 测试跳跳 (test pogo)"
       }
     ]
   },

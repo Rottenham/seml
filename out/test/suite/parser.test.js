@@ -621,7 +621,7 @@ describe("parseProtect", () => {
     it("should return an error if positions are repeated", () => {
         (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {}, rounds: [] }, 1, "protect:18 18"))
             .to.deep.equal((0, error_1.error)(1, "保护位置重叠", "18"));
-        (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {}, rounds: [] }, 1, "protect:19' 18"))
+        (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {}, rounds: [] }, 1, "protect:17' 18"))
             .to.deep.equal((0, error_1.error)(1, "保护位置重叠", "18"));
     });
     it("should parse protect positions", () => {
