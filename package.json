@@ -38,15 +38,15 @@
     "commands": [
       {
         "command": "seml.testSmash",
-        "title": "Seml: 测试砸率"
+        "title": "Seml: 测试砸率 (test smash rate)"
       },
       {
         "command": "seml.testExplode",
-        "title": "Seml: 测试炮伤"
+        "title": "Seml: 测试炮伤 (test loss)"
       },
       {
         "command": "seml.compileToJson",
-        "title": "Seml: 导出为 JSON"
+        "title": "Seml: 导出为 JSON (export as JSON)"
       }
     ]
   },
