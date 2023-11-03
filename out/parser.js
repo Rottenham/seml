@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.replaceVariables = exports.expandLines = exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseJalapeno = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
+exports.replaceVariables = exports.expandLines = exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
 const error_1 = require("./error");
 const string_1 = require("./string");
+const plant_types_1 = require("./plant_types");
 function getMaxRows(scene) {
     if (scene === undefined || scene === "FE") {
         return 6;
@@ -169,12 +170,49 @@ function parseCob(out, round, lineNum, line, cobNum) {
     return null;
 }
 exports.parseCob = parseCob;
-function parseCardCol(lineNum, colToken, desc) {
+function parseCardRow(out, lineNum, rowToken) {
+    const row = (0, string_1.parseNatural)(rowToken);
+    if (row === null || row < 1 || row > getMaxRows(out.setting.scene)) {
+        return (0, error_1.error)(lineNum, `用卡行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
+    }
+    return row;
+}
+function parseCardCol(lineNum, colToken) {
     const col = (0, string_1.parseNatural)(colToken);
     if (col === null || col < 1 || col > 9) {
-        return (0, error_1.error)(lineNum, `用${desc}列应为 1~9 内的整数`, colToken);
+        return (0, error_1.error)(lineNum, `用卡列应为 1~9 内的整数`, colToken);
     }
     return col;
+}
+;
+function parseCardTimeAndShovelTime(lineNum, timesToken, currWave) {
+    let cardTimeToken;
+    let shovelTimeToken;
+    const delimIndex = Math.max(timesToken.lastIndexOf("+"), timesToken.lastIndexOf("~"));
+    if (delimIndex <= 0) { // if starts with "+" (delimIndex is 0), still ignore it
+        cardTimeToken = timesToken;
+    }
+    else {
+        cardTimeToken = timesToken.slice(0, delimIndex);
+        shovelTimeToken = (0, string_1.chopPrefix)(timesToken.slice(delimIndex), "~")[0];
+    }
+    const cardTime = parseTime(lineNum, cardTimeToken, currWave.actions.slice(-1)[0]?.time);
+    if ((0, error_1.isError)(cardTime)) {
+        return cardTime;
+    }
+    if (shovelTimeToken === undefined) {
+        return [cardTime, null];
+    }
+    else {
+        const shovelTime = parseTime(lineNum, shovelTimeToken, cardTime);
+        if ((0, error_1.isError)(shovelTime)) {
+            return shovelTime;
+        }
+        if (shovelTime < cardTime) {
+            return (0, error_1.error)(lineNum, "铲除时机不可早于用卡时机", shovelTimeToken);
+        }
+        return [cardTime, shovelTime];
+    }
 }
 ;
 function parseFodder(out, round, lineNum, line) {
@@ -183,35 +221,6 @@ function parseFodder(out, round, lineNum, line) {
     if (currWaveNum === undefined || currWave === undefined) {
         return (0, error_1.error)(lineNum, "请先设定波次", line);
     }
-    const parseTimes = (lineNum, timesToken, currWave) => {
-        let cardTimeToken;
-        let shovelTimeToken;
-        const delimIndex = Math.max(timesToken.lastIndexOf("+"), timesToken.lastIndexOf("~"));
-        if (delimIndex <= 0) { // if starts with "+" (delimIndex is 0), still ignore it
-            cardTimeToken = timesToken;
-        }
-        else {
-            cardTimeToken = timesToken.slice(0, delimIndex);
-            shovelTimeToken = (0, string_1.chopPrefix)(timesToken.slice(delimIndex), "~")[0];
-        }
-        const cardTime = parseTime(lineNum, cardTimeToken, currWave.actions.slice(-1)[0]?.time);
-        if ((0, error_1.isError)(cardTime)) {
-            return cardTime;
-        }
-        if (shovelTimeToken === undefined) {
-            return [cardTime, null];
-        }
-        else {
-            const shovelTime = parseTime(lineNum, shovelTimeToken, cardTime);
-            if ((0, error_1.isError)(shovelTime)) {
-                return shovelTime;
-            }
-            if (shovelTime < cardTime) {
-                return (0, error_1.error)(lineNum, "铲除时机不可早于用垫时机", shovelTimeToken);
-            }
-            return [cardTime, shovelTime];
-        }
-    };
     const parseRows = (rowsToken) => {
         const rows = [];
         let skip = false;
@@ -222,7 +231,7 @@ function parseFodder(out, round, lineNum, line) {
             else {
                 const row = (0, string_1.parseNatural)(rowToken);
                 if (row === null || row < 1 || row > getMaxRows(out.setting.scene)) {
-                    return (0, error_1.error)(lineNum, `用垫行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
+                    return (0, error_1.error)(lineNum, `用卡行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
                 }
                 let card = "Normal";
                 const nextChar = rowsToken[i + 1];
@@ -293,9 +302,9 @@ function parseFodder(out, round, lineNum, line) {
     const tokens = line.split(" ");
     const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3], fodderArgTokens = tokens.slice(4);
     if (timeToken === undefined || rowsToken === undefined || colToken === undefined) {
-        return (0, error_1.error)(lineNum, "请提供用垫时机, 用垫行, 用垫列", line);
+        return (0, error_1.error)(lineNum, "请提供用卡时机, 用卡行, 用卡列", line);
     }
-    const times = parseTimes(lineNum, timeToken, currWave);
+    const times = parseCardTimeAndShovelTime(lineNum, timeToken, currWave);
     if ((0, error_1.isError)(times)) {
         return times;
     }
@@ -304,7 +313,7 @@ function parseFodder(out, round, lineNum, line) {
     if ((0, error_1.isError)(rows)) {
         return rows;
     }
-    const col = parseCardCol(lineNum, colToken, "垫");
+    const col = parseCardCol(lineNum, colToken);
     if ((0, error_1.isError)(col)) {
         return col;
     }
@@ -340,44 +349,40 @@ function parseFodder(out, round, lineNum, line) {
     return null;
 }
 exports.parseFodder = parseFodder;
-function parseJalapeno(out, round, lineNum, line) {
+function parseFixedCard(out, round, lineNum, line, plantType) {
     const currWave = getCurrWave(out, round);
     if (currWave === undefined) {
         return (0, error_1.error)(lineNum, "请先设定波次", line);
     }
-    const parseRow = (rowToken) => {
-        const row = (0, string_1.parseNatural)(rowToken);
-        if (row === null || row < 1 || row > getMaxRows(out.setting.scene)) {
-            return (0, error_1.error)(lineNum, `用卡行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
-        }
-        return row;
-    };
     const tokens = line.split(" ");
     const symbol = tokens[0], timeToken = tokens[1], rowToken = tokens[2], colToken = tokens[3];
     if (timeToken === undefined || rowToken === undefined || colToken === undefined) {
         return (0, error_1.error)(lineNum, "请提供用卡时机, 用卡行, 用卡列", line);
     }
-    const time = parseTime(lineNum, timeToken, currWave.actions.slice(-1)[0]?.time);
-    if ((0, error_1.isError)(time)) {
-        return time;
+    const times = parseCardTimeAndShovelTime(lineNum, timeToken, currWave);
+    if ((0, error_1.isError)(times)) {
+        return times;
     }
-    const row = parseRow(rowToken);
+    const time = times[0], shovelTime = times[1] ?? undefined;
+    const row = parseCardRow(out, lineNum, rowToken);
     if ((0, error_1.isError)(row)) {
         return row;
     }
-    const col = parseCardCol(lineNum, colToken, "卡");
+    const col = parseCardCol(lineNum, colToken);
     if ((0, error_1.isError)(col)) {
         return col;
     }
     currWave.actions.push({
-        op: "Jalapeno",
+        op: "FixedCard",
         symbol,
         time,
+        shovelTime,
+        plantType,
         position: { row, col }
     });
     return null;
 }
-exports.parseJalapeno = parseJalapeno;
+exports.parseFixedCard = parseFixedCard;
 function parseSet(out, lineNum, line) {
     const tokens = line.split(" ");
     if (tokens.length < 3) {
@@ -527,7 +532,10 @@ function parse(text) {
                 parseResult = parseFodder(out, round, lineNum, line);
             }
             else if (symbol === "J") {
-                parseResult = parseJalapeno(out, round, lineNum, line);
+                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.jalapeno);
+            }
+            else if (symbol === "G") {
+                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.garlic);
             }
             else if (symbol === "SET") {
                 parseResult = parseSet(out, lineNum, line);
@@ -595,18 +603,17 @@ function expandLines(lines) {
             if (startWave > endWave) {
                 return (0, error_1.error)(lineNum, "起始波数应大于终止波数", symbol);
             }
-            let nextCur = cur;
-            while (nextCur + 1 < originalLines.length
-                && !originalLines[nextCur + 1].line.startsWith("w")) {
-                nextCur++;
+            let prevCur = cur;
+            while (cur + 1 < originalLines.length
+                && !originalLines[cur + 1].line.startsWith("w")) {
+                cur++;
             }
             for (let waveNum = startWave; waveNum <= endWave; waveNum++) {
-                for (let i = cur; i <= nextCur; i++) {
+                for (let i = prevCur; i <= cur; i++) {
                     const { lineNum, line } = originalLines[i];
                     expandedLines.push({ lineNum, line: populateLineWithWave(line, waveNum) });
                 }
             }
-            cur = nextCur;
         }
     }
     let cur = 0;

@@ -1,5 +1,12 @@
+# Node packages
 node_modules
+
+# Packed previous versions
 *.vsix
+
+# Test coverage output
 .nyc_output
 coverage
+
+# Batch file to update binaries for testing
 copy_binaries.bat

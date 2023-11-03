@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { error } from "../../error";
 import {
-    parse, ParserOutput, parseCob, parseWave, parseFodder, parseJalapeno,
+    parse, ParserOutput, parseCob, parseWave, parseFodder, parseFixedCard,
     parseScene, parseProtect, parseIntArg, parseSet,
     expandLines, replaceVariables
 } from '../../parser';
+import { PlantType } from "../../plant_types";
 import { expect } from 'chai';
 
 describe("parseCob", () => {
@@ -279,25 +280,25 @@ describe("parseFodder", () => {
     it("should return an error if shovel time is earlier than fodder time", () => {
         out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
         expect(parseFodder(out, 0, 1, "C 300~299 2 9"))
-            .to.deep.equal(error(1, "铲除时机不可早于用垫时机", "299"));
+            .to.deep.equal(error(1, "铲除时机不可早于用卡时机", "299"));
     });
 
     it("should return an error if colToken is missing", () => {
         out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
         expect(parseFodder(out, 0, 1, "C 300 2"))
-            .to.deep.equal(error(1, "请提供用垫时机, 用垫行, 用垫列", "C 300 2"));
+            .to.deep.equal(error(1, "请提供用卡时机, 用卡行, 用卡列", "C 300 2"));
     });
 
     it("should return an error if rows are invalid", () => {
         out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
         expect(parseFodder(out, 0, 1, "C 300 7 9"))
-            .to.deep.equal(error(1, "用垫行应为 1~6 内的整数", "7"));
+            .to.deep.equal(error(1, "用卡行应为 1~6 内的整数", "7"));
     });
 
     it("should return an error if colToken is invalid", () => {
         out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
         expect(parseFodder(out, 0, 1, "C 300 2 0"))
-            .to.deep.equal(error(1, "用垫列应为 1~9 内的整数", "0"));
+            .to.deep.equal(error(1, "用卡列应为 1~9 内的整数", "0"));
     });
 
     it("should return an error if choose value is invalid", () => {
@@ -537,7 +538,7 @@ describe("parseFodder", () => {
     });
 });
 
-describe('parseJalapeno', () => {
+describe('parseFixedCard', () => {
     let out: ParserOutput;
 
     beforeEach(() => {
@@ -545,54 +546,56 @@ describe('parseJalapeno', () => {
     });
 
     it('should return an error if no wave is set', () => {
-        expect(parseJalapeno(out, 0, 1, 'J 100 1 1')).to.deep.equal(
+        expect(parseFixedCard(out, 0, 1, 'J 100 1 1', PlantType.jalapeno)).to.deep.equal(
             error(1, '请先设定波次', 'J 100 1 1')
         );
     });
 
     it('should return an error if colToken is missing', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
-        expect(parseJalapeno(out, 0, 1, 'J 100 1')).to.deep.equal(
+        expect(parseFixedCard(out, 0, 1, 'J 100 1', PlantType.jalapeno)).to.deep.equal(
             error(1, '请提供用卡时机, 用卡行, 用卡列', 'J 100 1')
         );
     });
 
     it('should return an error if time is invalid', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
-        expect(parseJalapeno(out, 0, 1, 'J -100 1 1')).to.deep.equal(
+        expect(parseFixedCard(out, 0, 1, 'J -100 1 1', PlantType.jalapeno)).to.deep.equal(
             error(1, '时间应为非负整数', '-100')
         );
     });
 
     it('should return an error if row is not a number', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
-        expect(parseJalapeno(out, 0, 1, 'J 100 a 1')).to.deep.equal(
+        expect(parseFixedCard(out, 0, 1, 'J 100 a 1', PlantType.jalapeno)).to.deep.equal(
             error(1, '用卡行应为 1~6 内的整数', 'a')
         );
     });
 
     it('should return an error if row is not within 1-6', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
-        expect(parseJalapeno(out, 0, 1, 'J 100 7 1')).to.deep.equal(
+        expect(parseFixedCard(out, 0, 1, 'J 100 7 1', PlantType.jalapeno)).to.deep.equal(
             error(1, '用卡行应为 1~6 内的整数', '7')
         );
     });
 
     it('should return an error if col is not within 1~9', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
-        expect(parseJalapeno(out, 0, 1, 'J 100 1 0')).to.deep.equal(
+        expect(parseFixedCard(out, 0, 1, 'J 100 1 0', PlantType.jalapeno)).to.deep.equal(
             error(1, '用卡列应为 1~9 内的整数', '0')
         );
     });
 
     it('should add a Jalapeno action to the current wave', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
-        expect(parseJalapeno(out, 0, 1, 'J 100 1 1')).equal(null);
+        expect(parseFixedCard(out, 0, 1, 'J 100 1 1', PlantType.jalapeno)).equal(null);
         expect(out.rounds[0]![0]!.actions).to.deep.equal([
             {
-                op: 'Jalapeno',
+                op: 'FixedCard',
                 symbol: 'J',
                 time: 100,
+                shovelTime: undefined,
+                plantType: PlantType.jalapeno,
                 position: { row: 1, col: 1 },
             },
         ]);
@@ -600,21 +603,40 @@ describe('parseJalapeno', () => {
 
     it('should add a delayed Jalapeno action to the current wave', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
-        expect(parseJalapeno(out, 0, 1, 'J 100 1 1')).equal(null);
-        expect(parseJalapeno(out, 0, 2, 'J +134 1 1')).equal(null);
+        expect(parseFixedCard(out, 0, 1, 'J 100 1 1', PlantType.jalapeno)).equal(null);
+        expect(parseFixedCard(out, 0, 2, 'J +134 1 1', PlantType.jalapeno)).equal(null);
         expect(out.rounds[0]![0]!.actions).to.deep.equal([
             {
-                op: 'Jalapeno',
+                op: 'FixedCard',
                 symbol: 'J',
                 time: 100,
+                shovelTime: undefined,
+                plantType: PlantType.jalapeno,
                 position: { row: 1, col: 1 },
             },
             {
-                op: 'Jalapeno',
+                op: 'FixedCard',
                 symbol: 'J',
                 time: 100 + 134,
+                shovelTime: undefined,
+                plantType: PlantType.jalapeno,
                 position: { row: 1, col: 1 },
             },
+        ]);
+    });
+
+    it('should add a Garlic action with shovel time to the current wave', () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseFixedCard(out, 0, 1, 'G 100+266 1 1', PlantType.garlic)).equal(null);
+        expect(out.rounds[0]![0]!.actions).to.deep.equal([
+            {
+                op: 'FixedCard',
+                symbol: 'G',
+                time: 100,
+                shovelTime: 100 + 266,
+                plantType: PlantType.garlic,
+                position: { row: 1, col: 1 },
+            }
         ]);
     });
 });
@@ -745,6 +767,8 @@ describe("parseProtect", () => {
             .to.deep.equal(error(1, "保护位置重叠", "18"));
         expect(parseProtect({ setting: {}, rounds: [] }, 1, "protect:17' 18"))
             .to.deep.equal(error(1, "保护位置重叠", "18"));
+        expect(parseProtect({ setting: {}, rounds: [] }, 1, "protect:18 17'"))
+            .to.deep.equal(error(1, "保护位置重叠", "17'"));
     });
 
     it("should parse protect positions", () => {
@@ -900,8 +924,8 @@ describe("parse", () => {
             });
     });
 
-    it("should parse a single wave with jalapeno", () => {
-        expect(parse("w1 601\nJ 300 2 9"))
+    it("should parse a single wave with jalapeno and garlic", () => {
+        expect(parse("w1 601\nJ 300 2 9\nG 100+266 5 9"))
             .to.have.property("out").that.deep.equal({
                 setting: { scene: "FE" },
                 rounds: [[{
@@ -909,14 +933,27 @@ describe("parse", () => {
                     waveLength: 601,
                     actions: [
                         {
-                            op: "Jalapeno",
-                            time: 300,
+                            op: "FixedCard",
+                            symbol: "G",
+                            time: 100,
+                            shovelTime: 100 + 266,
+                            plantType: PlantType.garlic,
+                            position: {
+                                row: 5,
+                                col: 9
+                            }
+                        },
+                        {
+                            op: "FixedCard",
                             symbol: "J",
+                            time: 300,
+                            shovelTime: undefined,
+                            plantType: PlantType.jalapeno,
                             position: {
                                 row: 2,
                                 col: 9
                             }
-                        },
+                        }
                     ],
                     startTick: undefined,
                 }]]
