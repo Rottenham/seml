@@ -19,7 +19,7 @@
         },
         {
             "name": "keyword.seml",
-            "match": "^w[1-9][\\s~0-9]*(?=$|#)"
+            "match": "^w(?!0|~)[\\s~0-9]*(?=$|#)"
         },
         {
             "name": "keyword.seml",
@@ -28,6 +28,10 @@
         {
             "name": "entity.other.attribute-name.seml",
             "match": "\\b([a-zA-Z_]+)(?=:)"
+        },
+        {
+            "name": "constant.numeric.seml",
+            "match": "\\b(base|BASE|flag|FLAG|cone|CONE|pole|POLE|buck|BUCK|news|NEWS|scre|SCRE|foot|FOOT|danc|DANC|back|BACK|duck|DUCK|snor|SNOR|zomb|ZOMB|dolp|DOLP|jack|JACK|ball|BALL|digg|DIGG|pogo|POGO|yeti|YETI|bung|BUNG|ladd|LADD|cata|CATA|garg|GARG|imp|IMP|giga|GIGA)\\b"
         }
     ],
     "repository": {},

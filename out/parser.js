@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.replaceVariables = exports.expandLines = exports.parse = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
+exports.replaceVariables = exports.expandLines = exports.parse = exports.parseZombieTypeArg = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
 const error_1 = require("./error");
 const string_1 = require("./string");
 const plant_types_1 = require("./plant_types");
+const zombie_types_1 = require("./zombie_types");
 function getMaxRows(scene) {
     if (scene === undefined || scene === "FE") {
         return 6;
@@ -484,19 +485,45 @@ function parseIntArg(args, argName, argFlag, lineNum, line) {
     if (argName in args) {
         return (0, error_1.error)(lineNum, "参数重复", argName);
     }
-    const value = line.split(":").slice(1).join(":");
-    const parsedValue = (0, string_1.parseNatural)(value);
-    if (parsedValue === null || parsedValue <= 0) {
-        return (0, error_1.error)(lineNum, `${argName} 的值应为正整数`, value);
+    const intToken = line.split(":").slice(1).join(":");
+    const parsedInt = (0, string_1.parseNatural)(intToken);
+    if (parsedInt === null || parsedInt <= 0) {
+        return (0, error_1.error)(lineNum, `${argName} 的值应为正整数`, intToken);
     }
-    args[argName] = [argFlag, parsedValue.toString()];
+    args[argName] = [argFlag, parsedInt.toString()];
     return null;
 }
 exports.parseIntArg = parseIntArg;
+function parseZombieTypeArg(args, argName, argFlag, lineNum, line, prevTypesStr) {
+    if (argName in args) {
+        return (0, error_1.error)(lineNum, "参数重复", argName);
+    }
+    const prevTypes = prevTypesStr === undefined ? [] : prevTypesStr.split(",").map(type => parseInt(type));
+    let zombieTypes = [];
+    for (const zombieTypeAbbr of line.split(":").slice(1).join(":").split(" ")) {
+        const lowerCasedZombieTypeAbbr = zombieTypeAbbr.toLowerCase();
+        const zombieType = zombie_types_1.zombieTypeAbbrToEnum[lowerCasedZombieTypeAbbr];
+        if (zombieType === undefined) {
+            let errorSrc = zombieTypeAbbr;
+            const closestZombieType = (0, string_1.findClosestString)(lowerCasedZombieTypeAbbr, Object.keys(zombie_types_1.zombieTypeAbbrToEnum));
+            if (closestZombieType !== null) {
+                errorSrc += ` (您是否要输入 ${closestZombieType}?)`;
+            }
+            return (0, error_1.error)(lineNum, `未知僵尸类型`, errorSrc);
+        }
+        if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
+            return (0, error_1.error)(lineNum, "僵尸类型重复", zombieTypeAbbr);
+        }
+        zombieTypes.push(zombieType);
+    }
+    args[argName] = [argFlag, zombieTypes.join(",")];
+    return null;
+}
+exports.parseZombieTypeArg = parseZombieTypeArg;
 function parse(text) {
     const out = { setting: {}, rounds: [] };
     const args = {};
-    const expandedLines = expandLines(text.split(/\r?\n/));
+    const expandedLines = expandLines(text.split(/\r?\n/)); // \r\n matches line break characters
     if ((0, error_1.isError)(expandedLines)) {
         return expandedLines;
     }
@@ -518,6 +545,12 @@ function parse(text) {
             }
             else if (symbol.startsWith("repeat:")) {
                 parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
+            }
+            else if (symbol.startsWith("require:")) {
+                parseResult = parseZombieTypeArg(args, "require", "-req", lineNum, line, args["ban"]?.[1]);
+            }
+            else if (symbol.startsWith("ban:")) {
+                parseResult = parseZombieTypeArg(args, "ban", "-ban", lineNum, line, args["require"]?.[1]);
             }
             else if (symbol.startsWith("w")) {
                 parseResult = parseWave(out, round, lineNum, line);
@@ -574,7 +607,11 @@ function getDuplicate(lines) {
     return duplicate ?? 1;
 }
 function expandLines(lines) {
-    const originalLines = lines.map((line, lineNum) => ({ lineNum: lineNum + 1, line: line.split("#")[0].trim() }));
+    const originalLines = lines.map((line, lineNum) => ({
+        lineNum: lineNum + 1, line: line
+            .split("#")[0].trim() // ignore comments 
+            .replace(/[ \t]+/g, ' ') // replace multiple spaces/tabs with one space
+    }));
     const expandedLines = [];
     const duplicate = getDuplicate(originalLines);
     if ((0, error_1.isError)(duplicate)) {
@@ -651,12 +688,16 @@ function getCurrWaveNum(out, round) {
     if (round === undefined) {
         return undefined;
     }
-    return out.rounds[round]?.length;
+    else {
+        return out.rounds[round]?.length;
+    }
 }
 function getCurrWave(out, round) {
     if (round === undefined) {
         return undefined;
     }
-    return out.rounds[round]?.slice(-1)[0];
+    else {
+        return out.rounds[round]?.slice(-1)[0];
+    }
 }
 //# sourceMappingURL=parser.js.map

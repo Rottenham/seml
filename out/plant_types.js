@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PlantType = void 0;
+// These names are taken from PvZ Emulator.
 var PlantType;
 (function (PlantType) {
     PlantType[PlantType["peaShooter"] = 0] = "peaShooter";

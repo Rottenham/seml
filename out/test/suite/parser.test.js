@@ -204,6 +204,8 @@ describe("parseFodder", () => {
     it("should return an error if no wave has been set", () => {
         (0, chai_1.expect)((0, parser_1.parseFodder)(out, 0, 1, "C 300 2 9"))
             .to.deep.equal((0, error_1.error)(1, "请先设定波次", "C 300 2 9"));
+        (0, chai_1.expect)((0, parser_1.parseFodder)(out, undefined, 1, "C 300 2 9"))
+            .to.deep.equal((0, error_1.error)(1, "请先设定波次", "C 300 2 9"));
     });
     it("should return an error if delay is used without context", () => {
         out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
@@ -646,20 +648,25 @@ describe("parseProtect", () => {
             .to.deep.equal((0, error_1.error)(1, "保护位置重叠", "18"));
         (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {}, rounds: [] }, 1, "protect:18 17'"))
             .to.deep.equal((0, error_1.error)(1, "保护位置重叠", "17'"));
+        (0, chai_1.expect)((0, parser_1.parseProtect)({ setting: {}, rounds: [] }, 1, "protect:17' 17'"))
+            .to.deep.equal((0, error_1.error)(1, "保护位置重叠", "17'"));
     });
     it("should parse protect positions", () => {
-        (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:18 29'")).equal(null);
+        (0, chai_1.expect)((0, parser_1.parseProtect)(out, 1, "protect:16' 18 26'")).equal(null);
         (0, chai_1.expect)(out).to.have.property("setting").that.deep.equal({
             protect: [{
+                    type: "Normal",
+                    row: 1,
+                    col: 6,
+                }, {
                     type: "Cob",
                     row: 1,
                     col: 8,
-                },
-                {
+                }, {
                     type: "Normal",
                     row: 2,
-                    col: 9,
-                }],
+                    col: 6,
+                },],
         });
     });
 });
@@ -684,6 +691,40 @@ describe("parseIntArg", () => {
     it("should return an error if arg is not a non-negative integer", () => {
         (0, chai_1.expect)((0, parser_1.parseIntArg)(args, "repeat", "-r", 1, "repeat:0"))
             .to.deep.equal((0, error_1.error)(1, "repeat 的值应为正整数", "0"));
+    });
+});
+describe("parseZombieTypeArg", () => {
+    let args;
+    beforeEach(() => {
+        args = {};
+    });
+    it("should return an error if arg is specified multiple times", () => {
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:garg", undefined)).to.equal(null);
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 2, "require:giga", undefined))
+            .to.deep.equal((0, error_1.error)(2, "参数重复", "require"));
+    });
+    it("should return an error if zombieTypeAbbr is completely unmatched", () => {
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:xxxx", undefined)).to.deep.equal((0, error_1.error)(1, "未知僵尸类型", "xxxx"));
+    });
+    it("should return an error if zombieTypeAbbr is unknown and also suggest closest name", () => {
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:football", undefined)).to.deep.equal((0, error_1.error)(1, "未知僵尸类型", "football (您是否要输入 foot?)"));
+    });
+    it("should return an error if zombie types are duplicated", () => {
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:flag flag", undefined)).to.deep.equal((0, error_1.error)(1, "僵尸类型重复", "flag"));
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:flag", undefined)).to.equal(null);
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "ban", "-ban", 2, "ban:flag", "1")).to.deep.equal((0, error_1.error)(2, "僵尸类型重复", "flag"));
+    });
+    it("should add zombieType to args if it's valid", () => {
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:flag", undefined)).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ require: ["-req", "1"] });
+    });
+    it("should ignore case", () => {
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:FlAg", undefined)).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ require: ["-req", "1"] });
+    });
+    it("should add multiple zombieTypes to args if they're valid", () => {
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:flag cone", undefined)).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ require: ["-req", "1,2"] });
     });
 });
 describe("parse", () => {
@@ -866,7 +907,7 @@ describe("parse", () => {
         });
     });
     it("should parse multiple waves with metadata", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("repeat:10\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 3 4 choose:1 waves:1,2\n"))
+        (0, chai_1.expect)((0, parser_1.parse)("repeat:10\nrequire:garg giga\nban:zomb\n w1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 3 4 choose:1 waves:1,2\n"))
             .to.deep.equal({
             out: {
                 setting: { scene: "FE" },
@@ -919,6 +960,8 @@ describe("parse", () => {
                         }]]
             }, args: {
                 repeat: ["-r", "10"],
+                require: ["-req", "23,32"],
+                ban: ["-ban", "12"],
             }
         });
     });

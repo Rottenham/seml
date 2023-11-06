@@ -1,6 +1,7 @@
 import { Error, error, isError } from "./error";
-import { chopPrefix, chopSuffix, parseNatural, parseDecimal } from "./string";
+import { chopPrefix, chopSuffix, parseNatural, parseDecimal, findClosestString } from "./string";
 import { PlantType } from "./plant_types";
+import { zombieTypeAbbrToEnum } from "./zombie_types";
 
 type Position = {
 	readonly row: number;
@@ -622,13 +623,48 @@ export function parseIntArg(args: { [key: string]: string[] }, argName: string, 
 	if (argName in args) {
 		return error(lineNum, "参数重复", argName);
 	}
-	const value = line.split(":").slice(1).join(":");
+	const intToken = line.split(":").slice(1).join(":");
 
-	const parsedValue = parseNatural(value);
-	if (parsedValue === null || parsedValue <= 0) {
-		return error(lineNum, `${argName} 的值应为正整数`, value);
+	const parsedInt = parseNatural(intToken);
+	if (parsedInt === null || parsedInt <= 0) {
+		return error(lineNum, `${argName} 的值应为正整数`, intToken);
 	}
-	args[argName] = [argFlag, parsedValue.toString()];
+	args[argName] = [argFlag, parsedInt.toString()];
+	return null;
+}
+
+export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: string, argFlag: string,
+	lineNum: number, line: string, prevTypesStr: string | undefined): null | Error {
+	if (argName in args) {
+		return error(lineNum, "参数重复", argName);
+	}
+
+	const prevTypes = prevTypesStr === undefined ? [] : prevTypesStr.split(",").map(type => parseInt(type));
+
+	let zombieTypes: number[] = [];
+	for (const zombieTypeAbbr of line.split(":").slice(1).join(":").split(" ")) {
+		const lowerCasedZombieTypeAbbr = zombieTypeAbbr.toLowerCase();
+
+		const zombieType = zombieTypeAbbrToEnum[lowerCasedZombieTypeAbbr];
+		if (zombieType === undefined) {
+			let errorSrc = zombieTypeAbbr;
+
+			const closestZombieType = findClosestString(lowerCasedZombieTypeAbbr, Object.keys(zombieTypeAbbrToEnum));
+			if (closestZombieType !== null) {
+				errorSrc += ` (您是否要输入 ${closestZombieType}?)`;
+			}
+
+			return error(lineNum, `未知僵尸类型`, errorSrc);
+		}
+
+		if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
+			return error(lineNum, "僵尸类型重复", zombieTypeAbbr);
+		}
+
+		zombieTypes.push(zombieType);
+	}
+
+	args[argName] = [argFlag, zombieTypes.join(",")];
 	return null;
 }
 
@@ -636,7 +672,7 @@ export function parse(text: string) {
 	const out: ParserOutput = { setting: {}, rounds: [] };
 	const args: { [key: string]: string[] } = {};
 
-	const expandedLines = expandLines(text.split(/\r?\n/));
+	const expandedLines = expandLines(text.split(/\r?\n/)); // \r\n matches line break characters
 	if (isError(expandedLines)) {
 		return expandedLines;
 	}
@@ -660,6 +696,10 @@ export function parse(text: string) {
 				parseResult = parseProtect(out, lineNum, line);
 			} else if (symbol.startsWith("repeat:")) {
 				parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
+			} else if (symbol.startsWith("require:")) {
+				parseResult = parseZombieTypeArg(args, "require", "-req", lineNum, line, args["ban"]?.[1]);
+			} else if (symbol.startsWith("ban:")) {
+				parseResult = parseZombieTypeArg(args, "ban", "-ban", lineNum, line, args["require"]?.[1]);
 			} else if (symbol.startsWith("w")) {
 				parseResult = parseWave(out, round!, lineNum, line);
 			} else if (/^(B|P|D)\d?$/.test(symbol.toUpperCase())) {
@@ -720,7 +760,11 @@ function getDuplicate(lines: Line[]): number | Error {
 
 export function expandLines(lines: string[]): { lines: Line[], totalRound: number } | Error {
 	const originalLines: Line[] = lines.map((line, lineNum) =>
-		({ lineNum: lineNum + 1, line: line.split("#")[0]!.trim() }));
+	({
+		lineNum: lineNum + 1, line: line
+			.split("#")[0]!.trim() 		// ignore comments 
+			.replace(/[ \t]+/g, ' ')   	// replace multiple spaces/tabs with one space
+	}));
 	const expandedLines: Line[] = [];
 
 	const duplicate = getDuplicate(originalLines);
@@ -803,13 +847,15 @@ export function replaceVariables(out: ParserOutput, line: string) {
 function getCurrWaveNum(out: ParserOutput, round: number | undefined): number | undefined {
 	if (round === undefined) {
 		return undefined;
+	} else {
+		return out.rounds[round]?.length;
 	}
-	return out.rounds[round]?.length;
 }
 
 function getCurrWave(out: ParserOutput, round: number | undefined): Wave | undefined {
 	if (round === undefined) {
 		return undefined;
+	} else {
+		return out.rounds[round]?.slice(-1)[0];
 	}
-	return out.rounds[round]?.slice(-1)[0];
 }

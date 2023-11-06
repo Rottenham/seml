@@ -46,7 +46,7 @@
       },
       {
         "command": "seml.testExplode",
-        "title": "Seml: 测试炮伤 (test loss)"
+        "title": "Seml: 测试炮伤 (test explode)"
       },
       {
         "command": "seml.testPogo",
