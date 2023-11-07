@@ -1,16 +1,16 @@
-export function chopPrefix(str: string, prefix: string): [string, boolean] {
+export function chopPrefix(str: string, prefix: string): string {
     if (str.startsWith(prefix)) {
-        return [str.slice(prefix.length), true];
+        return str.slice(prefix.length);
     } else {
-        return [str, false];
+        return str;
     }
 }
 
-export function chopSuffix(str: string, suffix: string): [string, boolean] {
+export function chopSuffix(str: string, suffix: string): string {
     if (str.endsWith(suffix)) {
-        return [str.slice(0, -suffix.length), true];
+        return str.slice(0, -suffix.length);
     } else {
-        return [str, false];
+        return str;
     }
 }
 
@@ -70,7 +70,7 @@ export function findClosestString(query: string, strs: string[]): string | null 
     for (const str of strs) {
         const distance = levenshteinDistance(query, str);
         const maxPossibleDistance = Math.max(query.length, str.length);
-        
+
         if (distance < maxPossibleDistance && distance < smallestDistance) {
             smallestDistance = distance;
             closestStr = str;

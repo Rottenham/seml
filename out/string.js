@@ -3,19 +3,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.findClosestString = exports.parseDecimal = exports.parseNatural = exports.chopSuffix = exports.chopPrefix = void 0;
 function chopPrefix(str, prefix) {
     if (str.startsWith(prefix)) {
-        return [str.slice(prefix.length), true];
+        return str.slice(prefix.length);
     }
     else {
-        return [str, false];
+        return str;
     }
 }
 exports.chopPrefix = chopPrefix;
 function chopSuffix(str, suffix) {
     if (str.endsWith(suffix)) {
-        return [str.slice(0, -suffix.length), true];
+        return str.slice(0, -suffix.length);
     }
     else {
-        return [str, false];
+        return str;
     }
 }
 exports.chopSuffix = chopSuffix;

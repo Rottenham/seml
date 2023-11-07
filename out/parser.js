@@ -14,12 +14,17 @@ function getMaxRows(scene) {
     }
 }
 function parseWave(out, round, lineNum, line) {
-    const parseWaveNum = (waveNumToken) => {
-        const waveNum = (0, string_1.parseNatural)(waveNumToken.slice(1));
-        if (waveNum === null || waveNum < 1 || waveNum > 9) {
-            return (0, error_1.error)(lineNum, "波数应为 1~9 内的整数", waveNumToken);
+    const parseWaveNum = (waveNumToken, prevWaveNum) => {
+        if (waveNumToken === "w") {
+            return prevWaveNum + 1;
         }
-        return waveNum;
+        else {
+            const waveNum = (0, string_1.parseNatural)((0, string_1.chopPrefix)(waveNumToken, "w"));
+            if (waveNum === null || waveNum < 1 || waveNum > 9) {
+                return (0, error_1.error)(lineNum, "波数应为正整数", waveNumToken);
+            }
+            return waveNum;
+        }
     };
     const parseIceTimes = (iceTimeTokens) => {
         const iceTimes = [];
@@ -55,14 +60,14 @@ function parseWave(out, round, lineNum, line) {
         return (0, error_1.error)(lineNum, "请提供波长", line);
     }
     const waveNumToken = tokens[0], iceTimeTokens = tokens.slice(1, -1), waveRangeToken = tokens[tokens.length - 1];
-    const waveNum = parseWaveNum(waveNumToken);
+    const prevWaveNum = getCurrWaveNum(out, round);
+    const waveNum = parseWaveNum(waveNumToken, prevWaveNum);
     if ((0, error_1.isError)(waveNum)) {
         return waveNum;
     }
     if (waveNum - 1 in out.rounds[round]) {
         return (0, error_1.error)(lineNum, "波数重复", waveNumToken);
     }
-    const prevWaveNum = out.rounds[round].length;
     if (prevWaveNum + 1 !== waveNum) {
         return (0, error_1.error)(lineNum, `请先设定第 ${prevWaveNum + 1} 波`, waveNumToken);
     }
@@ -84,7 +89,8 @@ function parseWave(out, round, lineNum, line) {
 }
 exports.parseWave = parseWave;
 function parseTime(lineNum, timeToken, prevTime) {
-    const [choppedTimeToken, isDelay] = (0, string_1.chopPrefix)(timeToken, "+");
+    const isDelay = timeToken.startsWith("+");
+    const choppedTimeToken = (0, string_1.chopPrefix)(timeToken, "+");
     const time = (0, string_1.parseNatural)(choppedTimeToken);
     if (time === null || time < 0) {
         return (0, error_1.error)(lineNum, "时间应为非负整数", choppedTimeToken);
@@ -195,7 +201,7 @@ function parseCardTimeAndShovelTime(lineNum, timesToken, currWave) {
     }
     else {
         cardTimeToken = timesToken.slice(0, delimIndex);
-        shovelTimeToken = (0, string_1.chopPrefix)(timesToken.slice(delimIndex), "~")[0];
+        shovelTimeToken = (0, string_1.chopPrefix)(timesToken.slice(delimIndex), "~");
     }
     const cardTime = parseTime(lineNum, cardTimeToken, currWave.actions.slice(-1)[0]?.time);
     if ((0, error_1.isError)(cardTime)) {
@@ -451,7 +457,8 @@ function parseProtect(out, lineNum, line) {
     }
     out.setting.protect = [];
     for (let posToken of value.split(" ")) {
-        const [choppedPosToken, isNormal] = (0, string_1.chopSuffix)(posToken, "'");
+        const isNormal = posToken.endsWith("'");
+        const choppedPosToken = (0, string_1.chopSuffix)(posToken, "'");
         if (choppedPosToken.length < 2) {
             return (0, error_1.error)(lineNum, "请提供要保护的行与列", line);
         }

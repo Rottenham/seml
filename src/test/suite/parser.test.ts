@@ -201,6 +201,16 @@ describe('parseWave', () => {
         });
     });
 
+    it('should auto deduce wave num if it is not provided', () => {
+        expect(parseWave(out, 0, 1, 'w 100 200 300 601')).equal(null);
+        expect(out.rounds[0]![0]).to.deep.equal({
+            iceTimes: [100, 200, 300],
+            waveLength: 601,
+            actions: [],
+            startTick: undefined,
+        });
+    });
+
     it('should parse valid wave with start tick', () => {
         expect(parseWave(out, 0, 1, 'w1 100 200 300 300~601')).equal(null);
         expect(out.rounds[0]![0]).to.deep.equal({
@@ -213,7 +223,7 @@ describe('parseWave', () => {
 
     it('should return an error for invalid wave number', () => {
         expect(parseWave(out, 0, 1, 'w0 100 200 300 601',))
-            .to.deep.equal(error(1, '波数应为 1~9 内的整数', 'w0'));
+            .to.deep.equal(error(1, '波数应为正整数', 'w0'));
     });
 
     it('should return an error for duplicate wave number', () => {
@@ -1122,8 +1132,8 @@ describe("parse", () => {
             });
     });
 
-    it("should ignore comments", () => {
-        expect(parse("w1 1 601 # this is a comment\nP 300 2 9\n"))
+    it("should ignore comments and multiple contiguous spaces/tabs", () => {
+        expect(parse("w1 \t1    601 # this is a comment\nP 300 2 9\n"))
             .to.have.property("out").that.deep.equal({
                 setting: { scene: "FE" },
                 rounds: [[{
