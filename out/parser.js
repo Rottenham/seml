@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.replaceVariables = exports.expandLines = exports.parse = exports.parseZombieTypeArg = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
+exports.replaceVariables = exports.expandLines = exports.parse = exports.parseZombieTypeArg = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
 const error_1 = require("./error");
 const string_1 = require("./string");
 const plant_types_1 = require("./plant_types");
@@ -155,7 +155,7 @@ function parseCob(out, round, lineNum, line, cobNum) {
             return (0, error_1.error)(lineNum, "屋顶场合请提供落点列", symbol);
         }
     }
-    const time = parseTime(lineNum, timeToken, currWave.actions[currWave.actions.length - 1]?.time);
+    const time = parseTime(lineNum, timeToken, currWave.actions.slice(-1)[0]?.time);
     if ((0, error_1.isError)(time)) {
         return time;
     }
@@ -239,6 +239,9 @@ function parseFodder(out, round, lineNum, line) {
                 const row = (0, string_1.parseNatural)(rowToken);
                 if (row === null || row < 1 || row > getMaxRows(out.setting.scene)) {
                     return (0, error_1.error)(lineNum, `用卡行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
+                }
+                if (rows.map(({ row }) => row).includes(row)) {
+                    return (0, error_1.error)(lineNum, "用卡行重复", rowToken);
                 }
                 let card = "Normal";
                 const nextChar = rowsToken[i + 1];
@@ -337,6 +340,9 @@ function parseFodder(out, round, lineNum, line) {
         });
     }
     else {
+        if (rowsToken.length < 2) {
+            return (0, error_1.error)(lineNum, "请提供至少 2 个用卡行", rowsToken);
+        }
         const fodderArgs = parseFodderArgs(fodderArgTokens, rows.length, symbol === "C_POS");
         if ((0, error_1.isError)(fodderArgs)) {
             return fodderArgs;
@@ -366,11 +372,23 @@ function parseFixedCard(out, round, lineNum, line, plantType) {
     if (timeToken === undefined || rowToken === undefined || colToken === undefined) {
         return (0, error_1.error)(lineNum, "请提供用卡时机, 用卡行, 用卡列", line);
     }
-    const times = parseCardTimeAndShovelTime(lineNum, timeToken, currWave);
-    if ((0, error_1.isError)(times)) {
-        return times;
+    let time;
+    let shovelTime = undefined;
+    if (symbol === "G") {
+        const parsedTimes = parseCardTimeAndShovelTime(lineNum, timeToken, currWave);
+        if ((0, error_1.isError)(parsedTimes)) {
+            return parsedTimes;
+        }
+        time = parsedTimes[0];
+        shovelTime = parsedTimes[1] ?? undefined;
     }
-    const time = times[0], shovelTime = times[1] ?? undefined;
+    else {
+        const parsedTime = parseTime(lineNum, timeToken, currWave.actions.slice(-1)[0]?.time);
+        if ((0, error_1.isError)(parsedTime)) {
+            return parsedTime;
+        }
+        time = parsedTime;
+    }
     const row = parseCardRow(out, lineNum, rowToken);
     if ((0, error_1.isError)(row)) {
         return row;
@@ -390,6 +408,56 @@ function parseFixedCard(out, round, lineNum, line, plantType) {
     return null;
 }
 exports.parseFixedCard = parseFixedCard;
+function parseSmartCard(out, round, lineNum, line, plantType) {
+    const currWave = getCurrWave(out, round);
+    if (currWave === undefined) {
+        return (0, error_1.error)(lineNum, "请先设定波次", line);
+    }
+    const parseRows = (rowsToken) => {
+        if (rowsToken.length < 2) {
+            return (0, error_1.error)(lineNum, "请提供至少 2 个用卡行", rowsToken);
+        }
+        const rows = [];
+        for (const rowToken of rowsToken) {
+            const row = (0, string_1.parseNatural)(rowToken);
+            if (row === null || row < 1 || row > getMaxRows(out.setting.scene)) {
+                return (0, error_1.error)(lineNum, `用卡行应为 1~${getMaxRows(out.setting.scene)} 内的整数`, rowToken);
+            }
+            if (rows.includes(row)) {
+                return (0, error_1.error)(lineNum, "用卡行重复", rowToken);
+            }
+            rows.push(row);
+        }
+        rows.sort();
+        return rows;
+    };
+    const tokens = line.split(" ");
+    const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3];
+    if (timeToken === undefined || rowsToken === undefined || colToken === undefined) {
+        return (0, error_1.error)(lineNum, "请提供用卡时机, 用卡行, 用卡列", line);
+    }
+    const time = parseTime(lineNum, timeToken, currWave.actions.slice(-1)[0]?.time);
+    if ((0, error_1.isError)(time)) {
+        return time;
+    }
+    const rows = parseRows(rowsToken);
+    if ((0, error_1.isError)(rows)) {
+        return rows;
+    }
+    const col = parseCardCol(lineNum, colToken);
+    if ((0, error_1.isError)(col)) {
+        return col;
+    }
+    currWave.actions.push({
+        op: "SmartCard",
+        symbol,
+        time,
+        plantType,
+        positions: rows.map(row => ({ row, col }))
+    });
+    return null;
+}
+exports.parseSmartCard = parseSmartCard;
 function parseSet(out, lineNum, line) {
     const tokens = line.split(" ");
     if (tokens.length < 3) {
@@ -571,11 +639,26 @@ function parse(text) {
             else if (symbol === "C" || symbol === "C_POS" || symbol === "C_NUM") {
                 parseResult = parseFodder(out, round, lineNum, line);
             }
+            else if (symbol === "G") {
+                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.garlic);
+            }
+            else if (symbol === "A") {
+                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.cherryBomb);
+            }
             else if (symbol === "J") {
                 parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.jalapeno);
             }
-            else if (symbol === "G") {
-                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.garlic);
+            else if (symbol === "a") {
+                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.squash);
+            }
+            else if (symbol === "A_NUM") {
+                parseResult = parseSmartCard(out, round, lineNum, line, plant_types_1.PlantType.cherryBomb);
+            }
+            else if (symbol === "J_NUM") {
+                parseResult = parseSmartCard(out, round, lineNum, line, plant_types_1.PlantType.jalapeno);
+            }
+            else if (symbol === "a_NUM") {
+                parseResult = parseSmartCard(out, round, lineNum, line, plant_types_1.PlantType.squash);
             }
             else if (symbol === "SET") {
                 parseResult = parseSet(out, lineNum, line);

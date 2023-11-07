@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { error } from "../../error";
 import {
-    parse, ParserOutput, parseCob, parseWave, parseFodder, parseFixedCard,
+    parse, ParserOutput, parseCob, parseWave, parseFodder, parseFixedCard, parseSmartCard,
     parseSet, parseScene, parseProtect, parseIntArg, parseZombieTypeArg,
     expandLines, replaceVariables
 } from '../../parser';
@@ -307,86 +307,16 @@ describe("parseFodder", () => {
             .to.deep.equal(error(1, "用卡行应为 1~6 内的整数", "7"));
     });
 
+    it("should return an error if rows are repeated", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C 300 11 9"))
+            .to.deep.equal(error(1, "用卡行重复", "1"));
+    });
+
     it("should return an error if colToken is invalid", () => {
         out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
         expect(parseFodder(out, 0, 1, "C 300 2 0"))
             .to.deep.equal(error(1, "用卡列应为 1~9 内的整数", "0"));
-    });
-
-    it("should return an error if choose value is invalid", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 choose:0"))
-            .to.deep.equal(error(1, "choose 的值应为 1~1 内的整数", "0"));
-    });
-
-    it("should return an error if wave value is invalid", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 choose:1 waves:0"))
-            .to.deep.equal(error(1, "waves 的值应为 1~1 内的整数", "0"));
-    });
-
-    it("should return an error if wave value is repeated", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 choose:1 waves:1,1"))
-            .to.deep.equal(error(1, "waves 重复", "1"));
-    });
-
-    it("should return an error if parameter format is invalid", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 ??"))
-            .to.deep.equal(error(1, "传参格式应为 [参数]:[值] ", "??"));
-    });
-
-    it("should return an error if parameter key is empty", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 :1"))
-            .to.deep.equal(error(1, "参数不可为空", ":1"));
-    });
-
-    it("should return an error if parameter value is empty", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 choose:"))
-            .to.deep.equal(error(1, "值不可为空", "choose:"));
-    });
-
-    it("should return an error if parameter key is unknown", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 wave:1"))
-            .to.deep.equal(error(1, "未知参数", "wave"));
-    });
-
-    it("should return an error if parameter key is duplicated", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 choose:1 choose:2"))
-            .to.deep.equal(error(1, "参数重复", "choose"));
-    });
-
-    it("should return an error if choose value is missing for C_POS", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 waves:1"))
-            .to.deep.equal(error(1, "必须提供 choose 的值", ""));
-    });
-
-    it("should not return an error if choose value is missing for C_NUM", () => {
-        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
-        expect(parseFodder(out, 0, 1, "C_NUM 300 2 9"))
-            .to.equal(null);
-        expect(out.rounds[0]![0].actions).to.deep.equal([{
-            op: "SmartFodder",
-            time: 300,
-            symbol: "C_NUM",
-            shovelTime: undefined,
-            fodders: [
-                "Normal"
-            ],
-            positions: [
-                {
-                    row: 2,
-                    col: 9,
-                }],
-            choose: 1,
-            waves: [],
-        }]);
     });
 
     it("should add a Normal card action to the current wave", () => {
@@ -520,6 +450,101 @@ describe("parseFodder", () => {
         ]);
     });
 
+});
+
+describe('parseFodderWithArgs', () => {
+    let out: ParserOutput;
+
+    beforeEach(() => {
+        out = { setting: {}, rounds: [[]] };
+    });
+
+    it("should return an error if only one wave was provided", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 2 9 choose:0"))
+            .to.deep.equal(error(1, "请提供至少 2 个用卡行", "2"));
+    });
+
+    it("should return an error if choose value is invalid", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 25 9 choose:0"))
+            .to.deep.equal(error(1, "choose 的值应为 1~2 内的整数", "0"));
+    });
+
+    it("should return an error if wave value is invalid", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 25 9 choose:1 waves:0"))
+            .to.deep.equal(error(1, "waves 的值应为 1~1 内的整数", "0"));
+    });
+
+    it("should return an error if wave value is repeated", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 25 9 choose:1 waves:1,1"))
+            .to.deep.equal(error(1, "waves 重复", "1"));
+    });
+
+    it("should return an error if parameter format is invalid", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 25 9 ??"))
+            .to.deep.equal(error(1, "传参格式应为 [参数]:[值] ", "??"));
+    });
+
+    it("should return an error if parameter key is empty", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 25 9 :1"))
+            .to.deep.equal(error(1, "参数不可为空", ":1"));
+    });
+
+    it("should return an error if parameter value is empty", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 25 9 choose:"))
+            .to.deep.equal(error(1, "值不可为空", "choose:"));
+    });
+
+    it("should return an error if parameter key is unknown", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 25 9 wave:1"))
+            .to.deep.equal(error(1, "未知参数", "wave"));
+    });
+
+    it("should return an error if parameter key is duplicated", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 25 9 choose:1 choose:2"))
+            .to.deep.equal(error(1, "参数重复", "choose"));
+    });
+
+    it("should return an error if choose value is missing for C_POS", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_POS 300 25 9 waves:1"))
+            .to.deep.equal(error(1, "必须提供 choose 的值", ""));
+    });
+
+    it("should not return an error if choose value is missing for C_NUM", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseFodder(out, 0, 1, "C_NUM 300 25 9"))
+            .to.equal(null);
+        expect(out.rounds[0]![0].actions).to.deep.equal([{
+            op: "SmartFodder",
+            time: 300,
+            symbol: "C_NUM",
+            shovelTime: undefined,
+            fodders: [
+                "Normal",
+                "Normal"
+            ],
+            positions: [
+                {
+                    row: 2,
+                    col: 9,
+                }, {
+                    row: 5,
+                    col: 9,
+                }],
+            choose: 2,
+            waves: [],
+        }]);
+    });
+
     it("should add extra arguments to the card action", () => {
         out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
         expect(parseFodder(out, 0, 1, "C_POS 300 2'5 9 choose:2 waves:1")).equal(null);
@@ -574,6 +599,12 @@ describe('parseFixedCard', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
         expect(parseFixedCard(out, 0, 1, 'J -100 1 1', PlantType.jalapeno)).to.deep.equal(
             error(1, '时间应为非负整数', '-100')
+        );
+        expect(parseFixedCard(out, 0, 1, 'J 100+266 1 1', PlantType.jalapeno)).to.deep.equal(
+            error(1, '时间应为非负整数', '100+266')
+        );
+        expect(parseFixedCard(out, 0, 1, 'G 100+-134 1 1', PlantType.jalapeno)).to.deep.equal(
+            error(1, '时间应为非负整数', '-134')
         );
     });
 
@@ -640,6 +671,7 @@ describe('parseFixedCard', () => {
     it('should add a Garlic action with shovel time to the current wave', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
         expect(parseFixedCard(out, 0, 1, 'G 100+266 1 1', PlantType.garlic)).equal(null);
+        expect(parseFixedCard(out, 0, 2, 'G 300 1 1', PlantType.garlic)).equal(null);
         expect(out.rounds[0]![0]!.actions).to.deep.equal([
             {
                 op: 'FixedCard',
@@ -648,7 +680,123 @@ describe('parseFixedCard', () => {
                 shovelTime: 100 + 266,
                 plantType: PlantType.garlic,
                 position: { row: 1, col: 1 },
+            }, {
+                op: 'FixedCard',
+                symbol: 'G',
+                time: 300,
+                shovelTime: undefined,
+                plantType: PlantType.garlic,
+                position: { row: 1, col: 1 },
             }
+        ]);
+    });
+});
+
+describe("parseSmartCard", () => {
+    let out: ParserOutput;
+
+    beforeEach(() => {
+        out = { setting: {}, rounds: [[]] };
+    });
+
+    it("should return an error if colToken is missing", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 25", PlantType.jalapeno))
+            .to.deep.equal(error(1, "请提供用卡时机, 用卡行, 用卡列", "J_NUM 300 25"));
+    });
+
+
+    it("should return an error if no wave has been set", () => {
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 25 9", PlantType.jalapeno))
+            .to.deep.equal(error(1, "请先设定波次", "J_NUM 300 25 9"));
+    });
+
+    it("should return an error if time is negative", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM -1 25 9", PlantType.jalapeno)).to.deep.equal(
+            error(1, "时间应为非负整数", "-1")
+        );
+    });
+
+    it("should return an error if row is not a number", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 1a 9", PlantType.jalapeno)).to.deep.equal(
+            error(1, "用卡行应为 1~6 内的整数", "a")
+        );
+    });
+
+    it("should return an error if row is not within 1-6", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 17 9", PlantType.jalapeno)).to.deep.equal(
+            error(1, "用卡行应为 1~6 内的整数", "7")
+        );
+    });
+
+    it("should return an error if only one row was provided", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 1 9", PlantType.jalapeno)).to.deep.equal(
+            error(1, "请提供至少 2 个用卡行", "1")
+        );
+    });
+
+    it("should return an error if col is not a number", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 25 a", PlantType.jalapeno)).to.deep.equal(
+            error(1, "用卡列应为 1~9 内的整数", "a")
+        );
+    });
+
+    it("should return an error if col is not within 1-10", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 25 10", PlantType.jalapeno)).to.deep.equal(
+            error(1, "用卡列应为 1~9 内的整数", "10")
+        );
+    });
+
+    it("should return an error if row is duplicated", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 22 9", PlantType.jalapeno)).to.deep.equal(
+            error(1, "用卡行重复", "2")
+        );
+    });
+
+    it("should add a SmartCard action to the current wave", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 25 9", PlantType.jalapeno)).to.equal(null);
+        expect(out.rounds[0]![0]!.actions).to.deep.equal([
+            {
+                op: "SmartCard",
+                time: 300,
+                symbol: "J_NUM",
+                plantType: PlantType.jalapeno,
+                positions: [{
+                    row: 2,
+                    col: 9,
+                }, {
+                    row: 5,
+                    col: 9,
+                }],
+            },
+        ]);
+    });
+
+    it("should add multiple SmartCard actions to the current wave if there are multiple rows", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 25 9", PlantType.jalapeno)).to.equal(null);
+        expect(out.rounds[0]![0]!.actions).to.deep.equal([
+            {
+                op: "SmartCard",
+                symbol: "J_NUM",
+                time: 300,
+                plantType: PlantType.jalapeno,
+                positions: [{
+                    row: 2,
+                    col: 9,
+                }, {
+                    row: 5,
+                    col: 9,
+                }],
+            },
         ]);
     });
 });
@@ -993,8 +1141,8 @@ describe("parse", () => {
             });
     });
 
-    it("should parse a single wave with jalapeno and garlic", () => {
-        expect(parse("w1 601\nJ 300 2 9\nG 100+266 5 9"))
+    it("should parse a single wave with all types of fixed cards", () => {
+        expect(parse("w1 601\nJ 300 2 9\nG 100+266 5 9\nA 278 5 9\na 226 6 9"))
             .to.have.property("out").that.deep.equal({
                 setting: { scene: "FE" },
                 rounds: [[{
@@ -1007,6 +1155,28 @@ describe("parse", () => {
                             time: 100,
                             shovelTime: 100 + 266,
                             plantType: PlantType.garlic,
+                            position: {
+                                row: 5,
+                                col: 9
+                            }
+                        },
+                        {
+                            op: "FixedCard",
+                            symbol: "a",
+                            time: 226,
+                            shovelTime: undefined,
+                            plantType: PlantType.squash,
+                            position: {
+                                row: 6,
+                                col: 9
+                            }
+                        },
+                        {
+                            op: "FixedCard",
+                            symbol: "A",
+                            time: 278,
+                            shovelTime: undefined,
+                            plantType: PlantType.cherryBomb,
                             position: {
                                 row: 5,
                                 col: 9
@@ -1028,6 +1198,62 @@ describe("parse", () => {
                 }]]
             });
     });
+
+    it("should parse a single wave with all types of smart cards", () => {
+        expect(parse("w1 601\nJ_NUM 300 25 9\nA_NUM 278 25 9\na_NUM 226 16 9"))
+            .to.have.property("out").that.deep.equal({
+                setting: { scene: "FE" },
+                rounds: [[{
+                    iceTimes: [],
+                    waveLength: 601,
+                    actions: [
+                        {
+                            op: "SmartCard",
+                            symbol: "a_NUM",
+                            time: 226,
+                            plantType: PlantType.squash,
+                            positions: [{
+                                row: 1,
+                                col: 9
+                            },
+                            {
+                                row: 6,
+                                col: 9
+                            }]
+                        },
+                        {
+                            op: "SmartCard",
+                            symbol: "A_NUM",
+                            time: 278,
+                            plantType: PlantType.cherryBomb,
+                            positions: [{
+                                row: 2,
+                                col: 9
+                            },
+                            {
+                                row: 5,
+                                col: 9
+                            }]
+                        },
+                        {
+                            op: "SmartCard",
+                            symbol: "J_NUM",
+                            time: 300,
+                            plantType: PlantType.jalapeno,
+                            positions: [{
+                                row: 2,
+                                col: 9
+                            }, {
+                                row: 5,
+                                col: 9
+                            }]
+                        }
+                    ],
+                    startTick: undefined,
+                }]]
+            });
+    });
+
 
     it("should parse expanded waves with variables", () => {
         expect(parse("SET x 300\nw1~2 601\nP x 2 9 \nSET x x+100"))
@@ -1073,7 +1299,7 @@ describe("parse", () => {
     });
 
     it("should parse multiple waves with metadata", () => {
-        expect(parse("repeat:10\nrequire:garg giga\nban:zomb\n w1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 3 4 choose:1 waves:1,2\n"))
+        expect(parse("repeat:10\nrequire:garg giga\nban:zomb\n w1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 16 9 choose:1 waves:1,2\n"))
             .to.deep.equal({
                 out: {
                     setting: { scene: "FE" },
@@ -1111,11 +1337,15 @@ describe("parse", () => {
                                 shovelTime: 400 + 134,
                                 fodders: [
                                     "Normal",
+                                    "Normal",
                                 ],
                                 positions: [
                                     {
-                                        row: 3,
-                                        col: 4,
+                                        row: 1,
+                                        col: 9,
+                                    }, {
+                                        row: 6,
+                                        col: 9,
                                     },
                                 ],
                                 choose: 1,
