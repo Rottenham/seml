@@ -29,6 +29,10 @@ describe("parseCob", () => {
         out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 2", 1)).to.deep.equal((0, error_1.error)(1, "请提供炮生效时机, 落点行, 落点列", "P 300 2"));
     });
+    it("should return an error if there is excessive argument", () => {
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 2 9 9", 1)).to.deep.equal((0, error_1.error)(1, "多余的参数", "9"));
+    });
     it("should return an error if row is not a number", () => {
         out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseCob)(out, 0, 1, "P 300 a 9", 1)).to.deep.equal((0, error_1.error)(1, "落点行应为 1~6 内的整数", "a"));
@@ -505,6 +509,10 @@ describe('parseFixedCard', () => {
         out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseFixedCard)(out, 0, 1, 'J 100 1', plant_types_1.PlantType.jalapeno)).to.deep.equal((0, error_1.error)(1, '请提供用卡时机, 用卡行, 用卡列', 'J 100 1'));
     });
+    it('should return an error if there is excessive argument', () => {
+        out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseFixedCard)(out, 0, 1, 'J 100 1 9 9', plant_types_1.PlantType.jalapeno)).to.deep.equal((0, error_1.error)(1, '多余的参数', '9'));
+    });
     it('should return an error if time is invalid', () => {
         out.rounds[0][0] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseFixedCard)(out, 0, 1, 'J -100 1 1', plant_types_1.PlantType.jalapeno)).to.deep.equal((0, error_1.error)(1, '时间应为非负整数', '-100'));
@@ -592,6 +600,11 @@ describe("parseSmartCard", () => {
         out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
         (0, chai_1.expect)((0, parser_1.parseSmartCard)(out, 0, 1, "J_NUM 300 25", plant_types_1.PlantType.jalapeno))
             .to.deep.equal((0, error_1.error)(1, "请提供用卡时机, 用卡行, 用卡列", "J_NUM 300 25"));
+    });
+    it("should return an error if there is excessive argument", () => {
+        out.rounds[0][0] = { iceTimes: [], waveLength: 0, actions: [] };
+        (0, chai_1.expect)((0, parser_1.parseSmartCard)(out, 0, 1, "J_NUM 300 25 9 9", plant_types_1.PlantType.jalapeno))
+            .to.deep.equal((0, error_1.error)(1, "多余的参数", "9"));
     });
     it("should return an error if no wave has been set", () => {
         (0, chai_1.expect)((0, parser_1.parseSmartCard)(out, 0, 1, "J_NUM 300 25 9", plant_types_1.PlantType.jalapeno))

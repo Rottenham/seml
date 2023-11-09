@@ -135,9 +135,12 @@ function parseCob(out, round, lineNum, line, cobNum) {
         return col;
     };
     const tokens = line.split(" ");
-    const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3];
+    const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3], tl = tokens.slice(4).join(" ");
     if (timeToken === undefined || rowsToken === undefined || colToken === undefined) {
         return (0, error_1.error)(lineNum, "请提供炮生效时机, 落点行, 落点列", line);
+    }
+    if (tl.length > 0) {
+        return (0, error_1.error)(lineNum, "多余的参数", tl);
     }
     let cobCol;
     if (/\d$/.test(symbol)) {
@@ -368,9 +371,12 @@ function parseFixedCard(out, round, lineNum, line, plantType) {
         return (0, error_1.error)(lineNum, "请先设定波次", line);
     }
     const tokens = line.split(" ");
-    const symbol = tokens[0], timeToken = tokens[1], rowToken = tokens[2], colToken = tokens[3];
+    const symbol = tokens[0], timeToken = tokens[1], rowToken = tokens[2], colToken = tokens[3], tl = tokens.slice(4).join(" ");
     if (timeToken === undefined || rowToken === undefined || colToken === undefined) {
         return (0, error_1.error)(lineNum, "请提供用卡时机, 用卡行, 用卡列", line);
+    }
+    if (tl.length > 0) {
+        return (0, error_1.error)(lineNum, "多余的参数", tl);
     }
     let time;
     let shovelTime = undefined;
@@ -432,9 +438,12 @@ function parseSmartCard(out, round, lineNum, line, plantType) {
         return rows;
     };
     const tokens = line.split(" ");
-    const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3];
+    const symbol = tokens[0], timeToken = tokens[1], rowsToken = tokens[2], colToken = tokens[3], tl = tokens.slice(4).join(" ");
     if (timeToken === undefined || rowsToken === undefined || colToken === undefined) {
         return (0, error_1.error)(lineNum, "请提供用卡时机, 用卡行, 用卡列", line);
+    }
+    if (tl.length > 0) {
+        return (0, error_1.error)(lineNum, "多余的参数", tl);
     }
     const time = parseTime(lineNum, timeToken, currWave.actions.slice(-1)[0]?.time);
     if ((0, error_1.isError)(time)) {
@@ -460,10 +469,10 @@ function parseSmartCard(out, round, lineNum, line, plantType) {
 exports.parseSmartCard = parseSmartCard;
 function parseSet(out, lineNum, line) {
     const tokens = line.split(" ");
-    if (tokens.length < 3) {
+    const varName = tokens[1], expr = tokens.slice(2).join(" ");
+    if (varName === undefined) {
         return (0, error_1.error)(lineNum, "请提供变量名与表达式", line);
     }
-    const varName = tokens[1], expr = tokens[2];
     if (varName.length === 0) {
         return (0, error_1.error)(lineNum, "变量名不可为空", line);
     }

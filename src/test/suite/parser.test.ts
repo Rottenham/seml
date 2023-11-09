@@ -49,6 +49,13 @@ describe("parseCob", () => {
         );
     });
 
+    it("should return an error if there is excessive argument", () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseCob(out, 0, 1, "P 300 2 9 9", 1)).to.deep.equal(
+            error(1, "多余的参数", "9")
+        );
+    });
+
     it("should return an error if row is not a number", () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
         expect(parseCob(out, 0, 1, "P 300 a 9", 1)).to.deep.equal(
@@ -595,6 +602,13 @@ describe('parseFixedCard', () => {
         );
     });
 
+    it('should return an error if there is excessive argument', () => {
+        out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
+        expect(parseFixedCard(out, 0, 1, 'J 100 1 9 9', PlantType.jalapeno)).to.deep.equal(
+            error(1, '多余的参数', '9')
+        );
+    });
+
     it('should return an error if time is invalid', () => {
         out.rounds[0]![0] = { waveLength: 601, iceTimes: [], actions: [] };
         expect(parseFixedCard(out, 0, 1, 'J -100 1 1', PlantType.jalapeno)).to.deep.equal(
@@ -705,6 +719,12 @@ describe("parseSmartCard", () => {
             .to.deep.equal(error(1, "请提供用卡时机, 用卡行, 用卡列", "J_NUM 300 25"));
     });
 
+    it("should return an error if there is excessive argument", () => {
+        out.rounds[0]![0] = { iceTimes: [], waveLength: 0, actions: [] };
+        expect(parseSmartCard(out, 0, 1, "J_NUM 300 25 9 9", PlantType.jalapeno))
+            .to.deep.equal(error(1, "多余的参数", "9"));
+    });
+
 
     it("should return an error if no wave has been set", () => {
         expect(parseSmartCard(out, 0, 1, "J_NUM 300 25 9", PlantType.jalapeno))
@@ -812,7 +832,7 @@ describe('parseSet', () => {
         expect(parseSet(out, 1, 'set'))
             .to.deep.equal(error(1, '请提供变量名与表达式', 'set'));
     });
-
+    
     it('should return an error if variable name is empty', () => {
         expect(parseSet(out, 1, 'set  1+2'))
             .to.deep.equal(error(1, '变量名不可为空', 'set  1+2'));
