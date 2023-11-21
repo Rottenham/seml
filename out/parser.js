@@ -13,7 +13,7 @@ function getMaxRows(scene) {
         return 5;
     }
 }
-function parseWave(out, round, lineNum, line) {
+function parseWave(out, lineNum, line) {
     const parseWaveNum = (waveNumToken, prevWaveNum) => {
         if (waveNumToken === "w") {
             return prevWaveNum + 1;
@@ -60,12 +60,12 @@ function parseWave(out, round, lineNum, line) {
         return (0, error_1.error)(lineNum, "请提供波长", line);
     }
     const waveNumToken = tokens[0], iceTimeTokens = tokens.slice(1, -1), waveRangeToken = tokens[tokens.length - 1];
-    const prevWaveNum = getCurrWaveNum(out, round);
+    const prevWaveNum = getCurrWaveNum(out);
     const waveNum = parseWaveNum(waveNumToken, prevWaveNum);
     if ((0, error_1.isError)(waveNum)) {
         return waveNum;
     }
-    if (waveNum - 1 in out.rounds[round]) {
+    if (waveNum - 1 in out.waves) {
         return (0, error_1.error)(lineNum, "波数重复", waveNumToken);
     }
     if (prevWaveNum + 1 !== waveNum) {
@@ -84,7 +84,7 @@ function parseWave(out, round, lineNum, line) {
     if (lastIceTime !== undefined && waveLength < lastIceTime) {
         return (0, error_1.error)(lineNum, "波长应 >= 最后一次用冰时机", line);
     }
-    out.rounds[round].push({ iceTimes: iceTimes, waveLength: waveLength, actions: [], startTick });
+    out.waves.push({ iceTimes: iceTimes, waveLength: waveLength, actions: [], startTick });
     return null;
 }
 exports.parseWave = parseWave;
@@ -107,8 +107,8 @@ function parseTime(lineNum, timeToken, prevTime) {
     }
 }
 ;
-function parseCob(out, round, lineNum, line, cobNum) {
-    const currWave = getCurrWave(out, round);
+function parseCob(out, lineNum, line, cobNum) {
+    const currWave = getCurrWave(out);
     if (currWave === undefined) {
         return (0, error_1.error)(lineNum, "请先设定波次", line);
     }
@@ -225,10 +225,10 @@ function parseCardTimeAndShovelTime(lineNum, timesToken, currWave) {
     }
 }
 ;
-function parseFodder(out, round, lineNum, line) {
-    const currWaveNum = getCurrWaveNum(out, round);
-    const currWave = getCurrWave(out, round);
-    if (currWaveNum === undefined || currWave === undefined) {
+function parseFodder(out, lineNum, line) {
+    const currWaveNum = getCurrWaveNum(out);
+    const currWave = getCurrWave(out);
+    if (currWave === undefined) {
         return (0, error_1.error)(lineNum, "请先设定波次", line);
     }
     const parseRows = (rowsToken) => {
@@ -365,8 +365,8 @@ function parseFodder(out, round, lineNum, line) {
     return null;
 }
 exports.parseFodder = parseFodder;
-function parseFixedCard(out, round, lineNum, line, plantType) {
-    const currWave = getCurrWave(out, round);
+function parseFixedCard(out, lineNum, line, plantType) {
+    const currWave = getCurrWave(out);
     if (currWave === undefined) {
         return (0, error_1.error)(lineNum, "请先设定波次", line);
     }
@@ -414,8 +414,8 @@ function parseFixedCard(out, round, lineNum, line, plantType) {
     return null;
 }
 exports.parseFixedCard = parseFixedCard;
-function parseSmartCard(out, round, lineNum, line, plantType) {
-    const currWave = getCurrWave(out, round);
+function parseSmartCard(out, lineNum, line, plantType) {
+    const currWave = getCurrWave(out);
     if (currWave === undefined) {
         return (0, error_1.error)(lineNum, "请先设定波次", line);
     }
@@ -605,22 +605,18 @@ function parseZombieTypeArg(args, argName, argFlag, lineNum, line, prevTypesStr)
 }
 exports.parseZombieTypeArg = parseZombieTypeArg;
 function parse(text) {
-    const out = { setting: {}, rounds: [] };
+    const out = { setting: {}, waves: [] };
     const args = {};
-    const expandedLines = expandLines(text.split(/\r?\n/)); // \r\n matches line break characters
-    if ((0, error_1.isError)(expandedLines)) {
-        return expandedLines;
-    }
-    const { lines, totalRound } = expandedLines;
-    for (let round = 0; round < totalRound; round++) {
-        out.rounds.push([]);
+    const lines = expandLines(text.split(/\r?\n/)); // \r\n matches line break characters
+    if ((0, error_1.isError)(lines)) {
+        return lines;
     }
     const parseResult = parseScene(out, lines);
     if ((0, error_1.isError)(parseResult)) {
         return parseResult;
     }
-    for (let { lineNum, line, round } of lines) {
-        if (line.length > 0 && !line.startsWith("scene:") && !line.startsWith("duplicate:")) {
+    for (let { lineNum, line } of lines) {
+        if (line.length > 0 && !line.startsWith("scene:")) {
             line = replaceVariables(out, line);
             const symbol = line.split(" ")[0];
             let parseResult = null;
@@ -637,37 +633,37 @@ function parse(text) {
                 parseResult = parseZombieTypeArg(args, "ban", "-ban", lineNum, line, args["require"]?.[1]);
             }
             else if (symbol.startsWith("w")) {
-                parseResult = parseWave(out, round, lineNum, line);
+                parseResult = parseWave(out, lineNum, line);
             }
             else if (/^(B|P|D)\d?$/.test(symbol.toUpperCase())) {
-                parseResult = parseCob(out, round, lineNum, line, 1);
+                parseResult = parseCob(out, lineNum, line, 1);
             }
             else if (/^(BB|PP|DD)\d?$/.test(symbol.toUpperCase())) {
-                parseResult = parseCob(out, round, lineNum, line, 2);
+                parseResult = parseCob(out, lineNum, line, 2);
             }
             else if (symbol === "C" || symbol === "C_POS" || symbol === "C_NUM") {
-                parseResult = parseFodder(out, round, lineNum, line);
+                parseResult = parseFodder(out, lineNum, line);
             }
             else if (symbol === "G") {
-                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.garlic);
+                parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.garlic);
             }
             else if (symbol === "A") {
-                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.cherryBomb);
+                parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.cherryBomb);
             }
             else if (symbol === "J") {
-                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.jalapeno);
+                parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.jalapeno);
             }
             else if (symbol === "a") {
-                parseResult = parseFixedCard(out, round, lineNum, line, plant_types_1.PlantType.squash);
+                parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.squash);
             }
             else if (symbol === "A_NUM") {
-                parseResult = parseSmartCard(out, round, lineNum, line, plant_types_1.PlantType.cherryBomb);
+                parseResult = parseSmartCard(out, lineNum, line, plant_types_1.PlantType.cherryBomb);
             }
             else if (symbol === "J_NUM") {
-                parseResult = parseSmartCard(out, round, lineNum, line, plant_types_1.PlantType.jalapeno);
+                parseResult = parseSmartCard(out, lineNum, line, plant_types_1.PlantType.jalapeno);
             }
             else if (symbol === "a_NUM") {
-                parseResult = parseSmartCard(out, round, lineNum, line, plant_types_1.PlantType.squash);
+                parseResult = parseSmartCard(out, lineNum, line, plant_types_1.PlantType.squash);
             }
             else if (symbol === "SET") {
                 parseResult = parseSet(out, lineNum, line);
@@ -681,30 +677,12 @@ function parse(text) {
         }
     }
     delete out.setting.variables;
-    for (const round of out.rounds) {
-        for (const wave of round) {
-            wave.actions.sort((a, b) => a.time - b.time);
-        }
+    for (const wave of out.waves) {
+        wave.actions.sort((a, b) => a.time - b.time);
     }
     return { out, args };
 }
 exports.parse = parse;
-function getDuplicate(lines) {
-    let duplicate = null;
-    for (const { lineNum, line } of lines) {
-        if (line.startsWith("duplicate:")) {
-            if (duplicate !== null) {
-                return (0, error_1.error)(lineNum, "duplicate 重复", line);
-            }
-            const parsedDuplicate = (0, string_1.parseNatural)(line.split(":")[1]);
-            if (parsedDuplicate === null || parsedDuplicate <= 0) {
-                return (0, error_1.error)(lineNum, "duplicate 的值应为正整数", line);
-            }
-            duplicate = parsedDuplicate;
-        }
-    }
-    return duplicate ?? 1;
-}
 function expandLines(lines) {
     const originalLines = lines.map((line, lineNum) => ({
         lineNum: lineNum + 1, line: line
@@ -712,10 +690,6 @@ function expandLines(lines) {
             .replace(/[ \t]+/g, ' ') // replace multiple spaces/tabs with one space
     }));
     const expandedLines = [];
-    const duplicate = getDuplicate(originalLines);
-    if ((0, error_1.isError)(duplicate)) {
-        return duplicate;
-    }
     const populateLineWithWave = (line, waveNum) => {
         if (line.startsWith("w")) {
             return `w${waveNum} ${line.split(" ").slice(1).join(" ")}`.trim();
@@ -752,20 +726,7 @@ function expandLines(lines) {
             }
         }
     }
-    let cur = 0;
-    while (cur < expandedLines.length && !expandedLines[cur].line.startsWith("w")) {
-        cur++;
-    }
-    const originalLength = expandedLines.length;
-    for (let i = cur; i < originalLength; i++) {
-        expandedLines[i].round = 0;
-    }
-    for (let round = 1; round < duplicate; round++) {
-        for (let i = cur; i < originalLength; i++) {
-            expandedLines.push({ ...expandedLines[i], round });
-        }
-    }
-    return { lines: expandedLines, totalRound: duplicate };
+    return expandedLines;
 }
 exports.expandLines = expandLines;
 function replaceVariables(out, line) {
@@ -783,20 +744,10 @@ function replaceVariables(out, line) {
     }
 }
 exports.replaceVariables = replaceVariables;
-function getCurrWaveNum(out, round) {
-    if (round === undefined) {
-        return undefined;
-    }
-    else {
-        return out.rounds[round]?.length;
-    }
+function getCurrWaveNum(out) {
+    return out.waves.length;
 }
-function getCurrWave(out, round) {
-    if (round === undefined) {
-        return undefined;
-    }
-    else {
-        return out.rounds[round]?.slice(-1)[0];
-    }
+function getCurrWave(out) {
+    return out.waves.slice(-1)[0];
 }
 //# sourceMappingURL=parser.js.map
