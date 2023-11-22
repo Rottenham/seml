@@ -1,7 +1,7 @@
 import { Error, error, isError } from "./error";
 import { chopPrefix, chopSuffix, parseNatural, parseDecimal, findClosestString } from "./string";
 import { PlantType } from "./plant_types";
-import { zombieTypeAbbrToEnum } from "./zombie_types";
+import { zombieTypeCNAbbrToEnum, zombieTypeENAbbrToEnum } from "./zombie_types";
 
 type Position = {
 	readonly row: number;
@@ -676,7 +676,7 @@ export function parseProtect(out: ParserOutput, lineNum: number, line: string): 
 	if ("protect" in out.setting) {
 		return error(lineNum, "参数重复", "protect");
 	}
-	const value = line.split(":").slice(1).join(":");
+	const value = line.split(":").slice(1).join(":").trim();
 	if (value.length === 0) {
 		return error(lineNum, "protect 的值不可为空", line);
 	}
@@ -727,11 +727,11 @@ export function parseIntArg(args: { [key: string]: string[] }, argName: string, 
 	if (argName in args) {
 		return error(lineNum, "参数重复", argName);
 	}
-	const intToken = line.split(":").slice(1).join(":");
+	const value = line.split(":").slice(1).join(":").trim();
 
-	const parsedInt = parseNatural(intToken);
+	const parsedInt = parseNatural(value);
 	if (parsedInt === null || parsedInt <= 0) {
-		return error(lineNum, `${argName} 的值应为正整数`, intToken);
+		return error(lineNum, `${argName} 的值应为正整数`, value);
 	}
 	args[argName] = [argFlag, parsedInt.toString()];
 	return null;
@@ -743,32 +743,60 @@ export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: s
 		return error(lineNum, "参数重复", argName);
 	}
 
+	const zombieTypeAbbrs = line.split(":").slice(1).join(":").trim();
+	const containChinese = !/^[A-Za-z\s]*$/.test(zombieTypeAbbrs);
 	const prevTypes = prevTypesStr === undefined ? [] : prevTypesStr.split(",").map(type => parseInt(type));
+	const zombieTypes: number[] = [];
 
-	let zombieTypes: number[] = [];
-	for (const zombieTypeAbbr of line.split(":").slice(1).join(":").split(" ")) {
+	for (const zombieTypeAbbr of containChinese ? zombieTypeAbbrs : zombieTypeAbbrs.split(" ")) {
 		const lowerCasedZombieTypeAbbr = zombieTypeAbbr.toLowerCase();
 
-		const zombieType = zombieTypeAbbrToEnum[lowerCasedZombieTypeAbbr];
-		if (zombieType === undefined) {
-			let errorSrc = zombieTypeAbbr;
-
-			const closestZombieType = findClosestString(lowerCasedZombieTypeAbbr, Object.keys(zombieTypeAbbrToEnum));
-			if (closestZombieType !== null) {
-				errorSrc += ` (您是否要输入 ${closestZombieType}?)`;
+		let zombieType: number;
+		if (containChinese) {
+			const parsedZombieType = zombieTypeCNAbbrToEnum[lowerCasedZombieTypeAbbr];
+			if (parsedZombieType === undefined) {
+				return error(lineNum, `未知僵尸类型`, `${zombieTypeAbbr} (可用的僵尸类型: ${Object.keys(zombieTypeCNAbbrToEnum)})`);
 			}
+			zombieType = parsedZombieType;
+		} else {
+			const parsedZombieType = zombieTypeENAbbrToEnum[lowerCasedZombieTypeAbbr];
+			if (parsedZombieType === undefined) {
+				let errorSrc = zombieTypeAbbr;
 
-			return error(lineNum, `未知僵尸类型`, errorSrc);
+				const closestZombieType = findClosestString(lowerCasedZombieTypeAbbr, Object.keys(zombieTypeENAbbrToEnum));
+				if (closestZombieType !== null) {
+					errorSrc += ` (您是否要输入 ${closestZombieType}?)`;
+				}
+
+				return error(lineNum, `未知僵尸类型`, errorSrc);
+			}
+			zombieType = parsedZombieType;
 		}
 
 		if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
 			return error(lineNum, "僵尸类型重复", zombieTypeAbbr);
 		}
-
 		zombieTypes.push(zombieType);
 	}
 
 	args[argName] = [argFlag, zombieTypes.join(",")];
+	return null;
+}
+
+export function parseBoolArg(args: { [key: string]: string[] }, argName: string, argFlag: string,
+	lineNum: number, line: string): null | Error {
+	if (argName in args) {
+		return error(lineNum, "参数重复", argName);
+	}
+	const value = line.split(":").slice(1).join(":").trim().toLowerCase();
+
+	if (value !== "true" && value !== "false") {
+		return error(lineNum, `${argName} 的值应为 true 或 false`, value);
+	}
+
+	if (value === "true") {
+		args[argName] = [argFlag];
+	}
 	return null;
 }
 
@@ -800,6 +828,10 @@ export function parse(text: string) {
 				parseResult = parseZombieTypeArg(args, "require", "-req", lineNum, line, args["ban"]?.[1]);
 			} else if (symbol.startsWith("ban:")) {
 				parseResult = parseZombieTypeArg(args, "ban", "-ban", lineNum, line, args["require"]?.[1]);
+			} else if (symbol.startsWith("huge:")) {
+				parseResult = parseBoolArg(args, "huge", "-h", lineNum, line);
+			} else if (symbol.startsWith("assume_activate:")) {
+				parseResult = parseBoolArg(args, "assume_activate", "-a", lineNum, line);
 			} else if (symbol.startsWith("w")) {
 				parseResult = parseWave(out, lineNum, line);
 			} else if (/^(B|P|D)\d?$/.test(symbol.toUpperCase())) {

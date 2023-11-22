@@ -31,7 +31,15 @@
         },
         {
             "name": "constant.numeric.seml",
-            "match": "\\b(base|BASE|flag|FLAG|cone|CONE|pole|POLE|buck|BUCK|news|NEWS|scre|SCRE|foot|FOOT|danc|DANC|back|BACK|duck|DUCK|snor|SNOR|zomb|ZOMB|dolp|DOLP|jack|JACK|ball|BALL|digg|DIGG|pogo|POGO|yeti|YETI|bung|BUNG|ladd|LADD|cata|CATA|garg|GARG|imp|IMP|giga|GIGA)\\b"
+            "match": "障|杆|桶|报|门|橄|舞|潜|车|豚|丑|气|矿|跳|偷|梯|篮|白|红"
+        },
+        {
+            "name": "constant.numeric.seml",
+            "match": "\\b(cone|pole|buck|news|scre|foot|danc|snor|zomb|dolp|jack|ball|digg|pogo|bung|ladd|cata|garg|giga)\\b"
+        },
+        {
+            "name": "keyword.seml",
+            "match": "\\btrue|false\\b"
         }
     ],
     "repository": {},

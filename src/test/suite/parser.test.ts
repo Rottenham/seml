@@ -2,10 +2,11 @@
 import { error } from "../../error";
 import {
     parse, ParserOutput, parseCob, parseWave, parseFodder, parseFixedCard, parseSmartCard,
-    parseSet, parseScene, parseProtect, parseIntArg, parseZombieTypeArg,
+    parseSet, parseScene, parseProtect, parseIntArg, parseZombieTypeArg, parseBoolArg,
     expandLines, replaceVariables
 } from '../../parser';
 import { PlantType } from "../../plant_types";
+import { ZombieType } from "../../zombie_types";
 import { expect } from 'chai';
 
 describe("parseCob", () => {
@@ -995,7 +996,7 @@ describe("parseIntArg", () => {
             .to.deep.equal(error(2, "参数重复", "repeat"));
     });
 
-    it("should return an error if arg is not a non-negative integer", () => {
+    it("should return an error if value is not a non-negative integer", () => {
         expect(parseIntArg(args, "repeat", "-r", 1, "repeat:0"))
             .to.deep.equal(error(1, "repeat 的值应为正整数", "0"));
     });
@@ -1019,6 +1020,9 @@ describe("parseZombieTypeArg", () => {
         expect(parseZombieTypeArg(args, "require", "-req", 1, "require:xxxx", undefined)).to.deep.equal(
             error(1, "未知僵尸类型", "xxxx")
         );
+        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:僵", undefined)).to.deep.equal(
+            error(1, "未知僵尸类型", "僵 (可用的僵尸类型: 障,杆,桶,报,门,橄,舞,潜,车,豚,丑,气,矿,跳,偷,梯,篮,白,红)")
+        );
     });
 
     it("should return an error if zombieTypeAbbr is unknown and also suggest closest name", () => {
@@ -1028,28 +1032,61 @@ describe("parseZombieTypeArg", () => {
     });
 
     it("should return an error if zombie types are duplicated", () => {
-        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:flag flag", undefined)).to.deep.equal(
-            error(1, "僵尸类型重复", "flag")
+        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:buck buck", undefined)).to.deep.equal(
+            error(1, "僵尸类型重复", "buck")
         );
-        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:flag", undefined)).to.equal(null);
-        expect(parseZombieTypeArg(args, "ban", "-ban", 2, "ban:flag", "1")).to.deep.equal(
-            error(2, "僵尸类型重复", "flag")
+        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:buck", undefined)).to.equal(null);
+        expect(parseZombieTypeArg(args, "ban", "-ban", 2, "ban:buck", ZombieType.buckethead.toString())).to.deep.equal(
+            error(2, "僵尸类型重复", "buck")
         );
     });
 
     it("should add zombieType to args if it's valid", () => {
-        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:flag", undefined)).to.equal(null);
-        expect(args).to.deep.equal({ require: ["-req", "1"] });
+        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:buck", undefined)).to.equal(null);
+        expect(args).to.deep.equal({ require: ["-req", ZombieType.buckethead.toString()] });
     });
 
     it("should ignore case", () => {
-        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:FlAg", undefined)).to.equal(null);
-        expect(args).to.deep.equal({ require: ["-req", "1"] });
+        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:BuCK", undefined)).to.equal(null);
+        expect(args).to.deep.equal({ require: ["-req", ZombieType.buckethead.toString()] });
     });
 
     it("should add multiple zombieTypes to args if they're valid", () => {
-        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:flag cone", undefined)).to.equal(null);
-        expect(args).to.deep.equal({ require: ["-req", "1,2"] });
+        expect(parseZombieTypeArg(args, "require", "-req", 1, "require:cone buck", undefined)).to.equal(null);
+        expect(args).to.have.property("require").deep.equal(["-req", [ZombieType.conehead, ZombieType.buckethead].join(",")]);
+        expect(parseZombieTypeArg(args, "ban", "-ban", 1, "ban:红白", undefined)).to.equal(null);
+        expect(args).to.have.property("ban").that.deep.equal(["-ban", [ZombieType.gigaGargantuar, ZombieType.gargantuar].join(",")]);
+    });
+});
+
+describe("parseBoolArg", () => {
+    let args: { [key: string]: string[] };
+
+    beforeEach(() => {
+        args = {};
+    });
+
+
+    it("should parse huge", () => {
+        expect(parseBoolArg(args, "huge", "-h", 1, "huge:true")).to.equal(null);
+        expect(args).to.deep.equal({ huge: ["-h"] });
+    });
+
+    it("should parse assume_activate", () => {
+        expect(parseBoolArg(args, "assume_activate", "-a", 1, "assume_activate:true")).to.equal(null);
+        expect(args).to.deep.equal({ assume_activate: ["-a"] });
+    });
+
+
+    it("should return an error if arg is specified multiple times", () => {
+        expect(parseBoolArg(args, "huge", "-h", 1, "huge:true")).to.equal(null);
+        expect(parseBoolArg(args, "huge", "-h", 2, "huge:false"))
+            .to.deep.equal(error(2, "参数重复", "huge"));
+    });
+
+    it("should return an error if value is neither true or false", () => {
+        expect(parseBoolArg(args, "huge", "-h", 1, "huge:???"))
+            .to.deep.equal(error(1, "huge 的值应为 true 或 false", "???"));
     });
 });
 
@@ -1317,7 +1354,7 @@ describe("parse", () => {
     });
 
     it("should parse multiple waves with metadata", () => {
-        expect(parse("repeat:10\nrequire:garg giga\nban:zomb\n w1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 16 9 choose:1 waves:1,2\n"))
+        expect(parse("repeat:10\nrequire:garg giga\nban:zomb\nhuge:true\nassume_activate:false\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 16 9 choose:1 waves:1,2\n"))
             .to.deep.equal({
                 out: {
                     setting: { scene: "FE" },
@@ -1376,6 +1413,7 @@ describe("parse", () => {
                     repeat: ["-r", "10"],
                     require: ["-req", "23,32"],
                     ban: ["-ban", "12"],
+                    huge: ["-h"],
                 }
             });
     });

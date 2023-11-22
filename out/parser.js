@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.replaceVariables = exports.expandLines = exports.parse = exports.parseZombieTypeArg = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
+exports.replaceVariables = exports.expandLines = exports.parse = exports.parseBoolArg = exports.parseZombieTypeArg = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
 const error_1 = require("./error");
 const string_1 = require("./string");
 const plant_types_1 = require("./plant_types");
@@ -528,7 +528,7 @@ function parseProtect(out, lineNum, line) {
     if ("protect" in out.setting) {
         return (0, error_1.error)(lineNum, "参数重复", "protect");
     }
-    const value = line.split(":").slice(1).join(":");
+    const value = line.split(":").slice(1).join(":").trim();
     if (value.length === 0) {
         return (0, error_1.error)(lineNum, "protect 的值不可为空", line);
     }
@@ -569,10 +569,10 @@ function parseIntArg(args, argName, argFlag, lineNum, line) {
     if (argName in args) {
         return (0, error_1.error)(lineNum, "参数重复", argName);
     }
-    const intToken = line.split(":").slice(1).join(":");
-    const parsedInt = (0, string_1.parseNatural)(intToken);
+    const value = line.split(":").slice(1).join(":").trim();
+    const parsedInt = (0, string_1.parseNatural)(value);
     if (parsedInt === null || parsedInt <= 0) {
-        return (0, error_1.error)(lineNum, `${argName} 的值应为正整数`, intToken);
+        return (0, error_1.error)(lineNum, `${argName} 的值应为正整数`, value);
     }
     args[argName] = [argFlag, parsedInt.toString()];
     return null;
@@ -582,18 +582,31 @@ function parseZombieTypeArg(args, argName, argFlag, lineNum, line, prevTypesStr)
     if (argName in args) {
         return (0, error_1.error)(lineNum, "参数重复", argName);
     }
+    const zombieTypeAbbrs = line.split(":").slice(1).join(":").trim();
+    const containChinese = !/^[A-Za-z\s]*$/.test(zombieTypeAbbrs);
     const prevTypes = prevTypesStr === undefined ? [] : prevTypesStr.split(",").map(type => parseInt(type));
-    let zombieTypes = [];
-    for (const zombieTypeAbbr of line.split(":").slice(1).join(":").split(" ")) {
+    const zombieTypes = [];
+    for (const zombieTypeAbbr of containChinese ? zombieTypeAbbrs : zombieTypeAbbrs.split(" ")) {
         const lowerCasedZombieTypeAbbr = zombieTypeAbbr.toLowerCase();
-        const zombieType = zombie_types_1.zombieTypeAbbrToEnum[lowerCasedZombieTypeAbbr];
-        if (zombieType === undefined) {
-            let errorSrc = zombieTypeAbbr;
-            const closestZombieType = (0, string_1.findClosestString)(lowerCasedZombieTypeAbbr, Object.keys(zombie_types_1.zombieTypeAbbrToEnum));
-            if (closestZombieType !== null) {
-                errorSrc += ` (您是否要输入 ${closestZombieType}?)`;
+        let zombieType;
+        if (containChinese) {
+            const parsedZombieType = zombie_types_1.zombieTypeCNAbbrToEnum[lowerCasedZombieTypeAbbr];
+            if (parsedZombieType === undefined) {
+                return (0, error_1.error)(lineNum, `未知僵尸类型`, `${zombieTypeAbbr} (可用的僵尸类型: ${Object.keys(zombie_types_1.zombieTypeCNAbbrToEnum)})`);
             }
-            return (0, error_1.error)(lineNum, `未知僵尸类型`, errorSrc);
+            zombieType = parsedZombieType;
+        }
+        else {
+            const parsedZombieType = zombie_types_1.zombieTypeENAbbrToEnum[lowerCasedZombieTypeAbbr];
+            if (parsedZombieType === undefined) {
+                let errorSrc = zombieTypeAbbr;
+                const closestZombieType = (0, string_1.findClosestString)(lowerCasedZombieTypeAbbr, Object.keys(zombie_types_1.zombieTypeENAbbrToEnum));
+                if (closestZombieType !== null) {
+                    errorSrc += ` (您是否要输入 ${closestZombieType}?)`;
+                }
+                return (0, error_1.error)(lineNum, `未知僵尸类型`, errorSrc);
+            }
+            zombieType = parsedZombieType;
         }
         if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
             return (0, error_1.error)(lineNum, "僵尸类型重复", zombieTypeAbbr);
@@ -604,6 +617,20 @@ function parseZombieTypeArg(args, argName, argFlag, lineNum, line, prevTypesStr)
     return null;
 }
 exports.parseZombieTypeArg = parseZombieTypeArg;
+function parseBoolArg(args, argName, argFlag, lineNum, line) {
+    if (argName in args) {
+        return (0, error_1.error)(lineNum, "参数重复", argName);
+    }
+    const value = line.split(":").slice(1).join(":").trim().toLowerCase();
+    if (value !== "true" && value !== "false") {
+        return (0, error_1.error)(lineNum, `${argName} 的值应为 true 或 false`, value);
+    }
+    if (value === "true") {
+        args[argName] = [argFlag];
+    }
+    return null;
+}
+exports.parseBoolArg = parseBoolArg;
 function parse(text) {
     const out = { setting: {}, waves: [] };
     const args = {};
@@ -631,6 +658,12 @@ function parse(text) {
             }
             else if (symbol.startsWith("ban:")) {
                 parseResult = parseZombieTypeArg(args, "ban", "-ban", lineNum, line, args["require"]?.[1]);
+            }
+            else if (symbol.startsWith("huge:")) {
+                parseResult = parseBoolArg(args, "huge", "-h", lineNum, line);
+            }
+            else if (symbol.startsWith("assume_activate:")) {
+                parseResult = parseBoolArg(args, "assume_activate", "-a", lineNum, line);
             }
             else if (symbol.startsWith("w")) {
                 parseResult = parseWave(out, lineNum, line);
