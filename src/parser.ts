@@ -832,6 +832,8 @@ export function parse(text: string) {
 				parseResult = parseBoolArg(args, "huge", "-h", lineNum, line);
 			} else if (symbol.startsWith("assume_activate:")) {
 				parseResult = parseBoolArg(args, "assume_activate", "-a", lineNum, line);
+			} else if (symbol.startsWith("dance:")) {
+				parseResult = parseBoolArg(args, "dance", "-d", lineNum, line);
 			} else if (symbol.startsWith("w")) {
 				parseResult = parseWave(out, lineNum, line);
 			} else if (/^(B|P|D)\d?$/.test(symbol.toUpperCase())) {

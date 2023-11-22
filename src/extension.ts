@@ -61,7 +61,7 @@ function compileToJson(doc: vscode.TextDocument)
 
 export function activate(context: vscode.ExtensionContext) {
 
-	let compileToJsonCmd = vscode.commands.registerCommand('seml.compileToJson', () => {
+	context.subscriptions.push(vscode.commands.registerCommand('seml.compileToJson', () => {
 		const editor = vscode.window.activeTextEditor;
 		if (editor === undefined) {
 			return;
@@ -83,22 +83,20 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.window.showTextDocument(doc);
 			});
 		});
-	});
+	}));
 
-	context.subscriptions.push(compileToJsonCmd);
-
-	let testSmashCmd = vscode.commands.registerCommand('seml.testSmash', () => {
+	context.subscriptions.push(vscode.commands.registerCommand('seml.testSmash', () => {
 		const editor = vscode.window.activeTextEditor;
 		if (editor === undefined) {
 			return;
 		}
 
-		const compiiledJson = compileToJson(editor.document);
-		if (compiiledJson === undefined) {
+		const compiledJson = compileToJson(editor.document);
+		if (compiledJson === undefined) {
 			return;
 		}
 
-		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiiledJson;
+		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
 
 		const destDirName = path.join(dirName, "dest");
 		if (!fs.existsSync(destDirName)) {
@@ -117,22 +115,20 @@ export function activate(context: vscode.ExtensionContext) {
 					"-o", path.join(destDirName, baseName + "_smash")],
 				jsonFilePath);
 		});
-	});
+	}));
 
-	context.subscriptions.push(testSmashCmd);
-
-	let testExplodeCmd = vscode.commands.registerCommand('seml.testExplode', () => {
+	context.subscriptions.push(vscode.commands.registerCommand('seml.testExplode', () => {
 		const editor = vscode.window.activeTextEditor;
 		if (editor === undefined) {
 			return;
 		}
 
-		const compiiledJson = compileToJson(editor.document);
-		if (compiiledJson === undefined) {
+		const compiledJson = compileToJson(editor.document);
+		if (compiledJson === undefined) {
 			return;
 		}
 
-		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiiledJson;
+		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
 
 		const destDirName = path.join(dirName, "dest");
 		if (!fs.existsSync(destDirName)) {
@@ -151,22 +147,20 @@ export function activate(context: vscode.ExtensionContext) {
 					"-o", path.join(destDirName, baseName + "_explode")],
 				jsonFilePath);
 		});
-	});
+	}));
 
-	context.subscriptions.push(testExplodeCmd);
-
-	let testPogoCmd = vscode.commands.registerCommand('seml.testPogo', () => {
+	context.subscriptions.push(vscode.commands.registerCommand('seml.testPogo', () => {
 		const editor = vscode.window.activeTextEditor;
 		if (editor === undefined) {
 			return;
 		}
 
-		const compiiledJson = compileToJson(editor.document);
-		if (compiiledJson === undefined) {
+		const compiledJson = compileToJson(editor.document);
+		if (compiledJson === undefined) {
 			return;
 		}
 
-		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiiledJson;
+		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
 
 		const destDirName = path.join(dirName, "dest");
 		if (!fs.existsSync(destDirName)) {
@@ -185,9 +179,40 @@ export function activate(context: vscode.ExtensionContext) {
 					"-o", path.join(destDirName, baseName + "_pogo")],
 				jsonFilePath);
 		});
-	});
+	}));
 
-	context.subscriptions.push(testPogoCmd);
+	context.subscriptions.push(vscode.commands.registerCommand('seml.testRefresh', () => {
+		const editor = vscode.window.activeTextEditor;
+		if (editor === undefined) {
+			return;
+		}
+
+		const compiledJson = compileToJson(editor.document);
+		if (compiledJson === undefined) {
+			return;
+		}
+
+		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
+
+		const destDirName = path.join(dirName, "dest");
+		if (!fs.existsSync(destDirName)) {
+			fs.mkdirSync(destDirName);
+		}
+
+		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
+			if (err) {
+				vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
+				return;
+			}
+
+			runBinary('refresh_test.exe',
+				[...Object.values(args).flatMap(x => x),
+					"-f", jsonFilePath,
+					"-o", path.join(destDirName, baseName + "_refresh")],
+				jsonFilePath);
+		});
+	}));
+
 
 }
 

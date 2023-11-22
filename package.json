@@ -51,6 +51,10 @@
       {
         "command": "seml.testPogo",
         "title": "Seml: 测试跳跳 (test pogo)"
+      },
+      {
+        "command": "seml.testRefresh",
+        "title": "Seml: 测试刷新 (test refresh)"
       }
     ]
   },

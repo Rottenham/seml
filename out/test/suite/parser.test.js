@@ -1141,7 +1141,7 @@ describe("parse", () => {
         });
     });
     it("should parse multiple waves with metadata", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("repeat:10\nrequire:garg giga\nban:zomb\nhuge:true\nassume_activate:false\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 16 9 choose:1 waves:1,2\n"))
+        (0, chai_1.expect)((0, parser_1.parse)("repeat:10\nrequire:garg giga\nban:zomb\nhuge:true\nassume_activate:false\ndance:true\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 16 9 choose:1 waves:1,2\n"))
             .to.deep.equal({
             out: {
                 setting: { scene: "FE" },
@@ -1201,6 +1201,7 @@ describe("parse", () => {
                 require: ["-req", "23,32"],
                 ban: ["-ban", "12"],
                 huge: ["-h"],
+                dance: ["-d"],
             }
         });
     });
