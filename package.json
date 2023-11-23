@@ -42,7 +42,7 @@
       },
       {
         "command": "seml.testSmash",
-        "title": "Seml: 测试砸率 (test smash rate)"
+        "title": "Seml: 测试砸率 (test smash)"
       },
       {
         "command": "seml.testExplode",
