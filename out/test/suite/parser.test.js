@@ -191,15 +191,15 @@ describe('parseWave', () => {
     });
     it('should return an error for invalid wave length', () => {
         (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 100 200 300 0'))
-            .to.deep.equal((0, error_1.error)(1, '波长应为 >= 601 的整数', '0'));
+            .to.deep.equal((0, error_1.error)(1, '波长应为 ≥ 601 的整数', '0'));
     });
     it('should return an error for invalid ice time', () => {
         (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 100 a 300 601'))
-            .to.deep.equal((0, error_1.error)(1, '用冰时机应为正整数', 'a'));
+            .to.deep.equal((0, error_1.error)(1, '用冰时机应为非负整数', 'a'));
     });
     it('should return an error for wave length less than last ice time', () => {
         (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 602 601'))
-            .to.deep.equal((0, error_1.error)(1, '波长应 >= 最后一次用冰时机', 'w1 602 601'));
+            .to.deep.equal((0, error_1.error)(1, '波长应 ≥ 最后一次用冰时机', 'w1 602 601'));
     });
     it('should return an error for missing previous wave', () => {
         (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w2 601'))
@@ -207,7 +207,7 @@ describe('parseWave', () => {
     });
     it('should return an error if start tick is invalid', () => {
         (0, chai_1.expect)((0, parser_1.parseWave)(out, 1, 'w1 602~601'))
-            .to.deep.equal((0, error_1.error)(1, '起始时刻应 <= 波长', '602'));
+            .to.deep.equal((0, error_1.error)(1, '起始时刻应 ≤ 波长', '602'));
     });
 });
 describe("parseFodder", () => {

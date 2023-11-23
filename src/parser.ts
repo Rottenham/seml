@@ -105,8 +105,8 @@ export function parseWave(out: ParserOutput, lineNum: number, line: string): nul
 		for (const iceTimeToken of iceTimeTokens) {
 			const iceTime = parseNatural(iceTimeToken);
 
-			if (iceTime === null || iceTime <= 0) {
-				return error(lineNum, "用冰时机应为正整数", iceTimeToken);
+			if (iceTime === null || iceTime < 0) {
+				return error(lineNum, "用冰时机应为非负整数", iceTimeToken);
 			}
 
 			iceTimes.push(iceTime);
@@ -121,14 +121,14 @@ export function parseWave(out: ParserOutput, lineNum: number, line: string): nul
 
 		const waveLength = parseNatural(waveLengthToken);
 		if (waveLength === null || waveLength < 601) {
-			return error(lineNum, "波长应为 >= 601 的整数", waveRangeToken);
+			return error(lineNum, "波长应为 ≥ 601 的整数", waveRangeToken);
 		}
 
 		let startTick: number | undefined;
 		if (startTickToken !== undefined) {
 			let parsedStartTick = parseNatural(startTickToken);
 			if (parsedStartTick === null || parsedStartTick > waveLength) {
-				return error(lineNum, "起始时刻应 <= 波长", startTickToken);
+				return error(lineNum, "起始时刻应 ≤ 波长", startTickToken);
 			}
 			startTick = parsedStartTick;
 		}
@@ -170,7 +170,7 @@ export function parseWave(out: ParserOutput, lineNum: number, line: string): nul
 
 	const lastIceTime = iceTimes[iceTimes.length - 1];
 	if (lastIceTime !== undefined && waveLength < lastIceTime) {
-		return error(lineNum, "波长应 >= 最后一次用冰时机", line);
+		return error(lineNum, "波长应 ≥ 最后一次用冰时机", line);
 	}
 
 	out.waves.push({ iceTimes: iceTimes, waveLength: waveLength, actions: [], startTick });
