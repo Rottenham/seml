@@ -41,7 +41,7 @@ repeat:10000            # 测试波数 (可省略, 默认 10000), 每波梯/丑/
 
 SET x 776
 
-w1~3 0 1200~1700        # 完美预判冰, 记录 1200~1500cs 的数据, 共三种情况
+w1~3 0 1200~1500        # 完美预判冰, 记录 1200~1500cs 的数据, 共三种情况
 C_NUM x+266 1"234'5' 9
 SET x x+24
 ```
@@ -58,7 +58,7 @@ scene:PE
 require:红白            # 必出的僵尸类型, 可用中文单字或英文四字缩写
 # ban: ...             # 禁出的僵尸类型
 huge:false             # true 为旗帜波, false 为普通波
-assume_activate:true   # true 为激活, false 为分离
+activate:true   # true 为激活, false 为分离
 dance:true             # true 为使用 dance cheat, false 为不使用 
 repeat:1000            # 测试选卡数 (可省略, 默认 1000)
 
@@ -205,7 +205,7 @@ scene:PE                # 场地, 六场地大小写皆可
 require:红白             # 必出的僵尸类型, 可用中文单字或英文四字缩写
 ban:foot zomb           # 禁出的僵尸类型
 huge:false              # true 为旗帜波, false 为普通波
-assume_activate:true    # true 为激活, false 为分离
+activate:true    # true 为激活, false 为分离
 dance:true              # true 为使用 dance cheat (测激活用 fast, 测分离用 slow), false 为不使用 
 repeat:1000             # 测试选卡数 (默认 1000)
 ```

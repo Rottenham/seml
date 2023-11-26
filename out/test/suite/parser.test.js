@@ -871,9 +871,9 @@ describe("parseBoolArg", () => {
         (0, chai_1.expect)((0, parser_1.parseBoolArg)(args, "huge", "-h", 1, "huge:true")).to.equal(null);
         (0, chai_1.expect)(args).to.deep.equal({ huge: ["-h"] });
     });
-    it("should parse assume_activate", () => {
-        (0, chai_1.expect)((0, parser_1.parseBoolArg)(args, "assume_activate", "-a", 1, "assume_activate:true")).to.equal(null);
-        (0, chai_1.expect)(args).to.deep.equal({ assume_activate: ["-a"] });
+    it("should parse activate", () => {
+        (0, chai_1.expect)((0, parser_1.parseBoolArg)(args, "activate", "-a", 1, "activate:true")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ activate: ["-a"] });
     });
     it("should return an error if arg is specified multiple times", () => {
         (0, chai_1.expect)((0, parser_1.parseBoolArg)(args, "huge", "-h", 1, "huge:true")).to.equal(null);
@@ -1141,7 +1141,7 @@ describe("parse", () => {
         });
     });
     it("should parse multiple waves with metadata", () => {
-        (0, chai_1.expect)((0, parser_1.parse)("repeat:10\nrequire:garg giga\nban:zomb\nhuge:true\nassume_activate:false\ndance:true\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 16 9 choose:1 waves:1,2\n"))
+        (0, chai_1.expect)((0, parser_1.parse)("repeat:10\nrequire:garg giga\nban:zomb\nhuge:true\nactivate:false\ndance:true\nw1 601\nPP 300 25 9\nw2 1 1250\nC_POS 400+134 16 9 choose:1 waves:1,2\n"))
             .to.deep.equal({
             out: {
                 setting: { scene: "FE" },
@@ -1236,6 +1236,14 @@ describe("parse", () => {
             lineNum: 2,
             msg: "未知符号",
             src: "X",
+        });
+    });
+    it("should deprecate assume_activate", () => {
+        (0, chai_1.expect)((0, parser_1.parse)("assume_activate:true\n")).to.deep.equal({
+            type: "Error",
+            lineNum: 1,
+            msg: "自 Seml 1.5.5 起, assume_activate 已更名为 activate",
+            src: "assume_activate:true",
         });
     });
 });
