@@ -1,6 +1,6 @@
 # Seml: Survival Endless Markup Langauge
 
-Seml 是为 Plants vs. Zombies Survival Endless 定制的标记语言, 可用于描述波长, 用炮, 用垫等信息, 并内置了砸率测试,炮伤测试等功能.
+Seml 是为 Plants vs. Zombies Survival Endless 定制的标记语言, 可用于描述波长, 用炮, 用垫等信息, 并内置了砸率测试, 炮伤测试, 刷新测试等功能.
 
 ## 快速开始: 砸率测试
 
@@ -58,8 +58,8 @@ scene:PE
 require:红白            # 必出的僵尸类型, 可用中文单字或英文四字缩写
 # ban: ...             # 禁出的僵尸类型
 huge:false             # true 为旗帜波, false 为普通波
-activate:true   # true 为激活, false 为分离
-dance:true             # true 为使用 dance cheat, false 为不使用 
+activate:true          # true 为激活, false 为分离
+dance:true             # true 为使用 dance cheat, false 为不使用
 repeat:1000            # 测试选卡数 (可省略, 默认 1000)
 
 w 601

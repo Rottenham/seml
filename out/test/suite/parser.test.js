@@ -20,9 +20,9 @@ describe("parseCob", () => {
     });
     it("should return an error if delay is used without context", () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P +220 2 9", 1)).to.deep.equal((0, error_1.error)(1, "没有延迟基准", "+220"));
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P +220 2 9", 1)).to.deep.equal((0, error_1.error)(1, "没有延迟基准, 请先使用非延迟语句", "+220"));
     });
-    it("should return an error if number of rows dooes not match expected number of cobs", () => {
+    it("should return an error if number of rows does not match expected number of cobs", () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
         (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "PP 300 2 9", 2)).to.deep.equal((0, error_1.error)(1, "请提供 2 个落点行", "2"));
     });
@@ -32,7 +32,7 @@ describe("parseCob", () => {
     });
     it("should return an error if there is excessive argument", () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 9 9", 1)).to.deep.equal((0, error_1.error)(1, "多余的参数", "9"));
+        (0, chai_1.expect)((0, parser_1.parseCob)(out, 1, "P 300 2 9 9", 1)).to.deep.equal((0, error_1.error)(1, "请删去多余的参数", "9"));
     });
     it("should return an error if row is not a number", () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
@@ -222,7 +222,7 @@ describe("parseFodder", () => {
     it("should return an error if delay is used without context", () => {
         out.waves[0] = { iceTimes: [], waveLength: 0, actions: [] };
         (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C +134 2 9"))
-            .to.deep.equal((0, error_1.error)(1, "没有延迟基准", "+134"));
+            .to.deep.equal((0, error_1.error)(1, "没有延迟基准, 请先使用非延迟语句", "+134"));
     });
     it("should return an error if shovel time is negative", () => {
         out.waves[0] = { iceTimes: [], waveLength: 0, actions: [] };
@@ -429,7 +429,7 @@ describe('parseFodderWithArgs', () => {
     it("should return an error if parameter key is unknown", () => {
         out.waves[0] = { iceTimes: [], waveLength: 0, actions: [] };
         (0, chai_1.expect)((0, parser_1.parseFodder)(out, 1, "C_POS 300 25 9 wave:1"))
-            .to.deep.equal((0, error_1.error)(1, "未知参数", "wave"));
+            .to.deep.equal((0, error_1.error)(1, "未知参数", "wave (支持的参数: choose, waves)"));
     });
     it("should return an error if parameter key is duplicated", () => {
         out.waves[0] = { iceTimes: [], waveLength: 0, actions: [] };
@@ -510,7 +510,7 @@ describe('parseFixedCard', () => {
     });
     it('should return an error if there is excessive argument', () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
-        (0, chai_1.expect)((0, parser_1.parseFixedCard)(out, 1, 'J 100 1 9 9', plant_types_1.PlantType.jalapeno)).to.deep.equal((0, error_1.error)(1, '多余的参数', '9'));
+        (0, chai_1.expect)((0, parser_1.parseFixedCard)(out, 1, 'J 100 1 9 9', plant_types_1.PlantType.jalapeno)).to.deep.equal((0, error_1.error)(1, '请删去多余的参数', '9'));
     });
     it('should return an error if time is invalid', () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
@@ -603,7 +603,7 @@ describe("parseSmartCard", () => {
     it("should return an error if there is excessive argument", () => {
         out.waves[0] = { iceTimes: [], waveLength: 0, actions: [] };
         (0, chai_1.expect)((0, parser_1.parseSmartCard)(out, 1, "J_NUM 300 25 9 9", plant_types_1.PlantType.jalapeno))
-            .to.deep.equal((0, error_1.error)(1, "多余的参数", "9"));
+            .to.deep.equal((0, error_1.error)(1, "请删去多余的参数", "9"));
     });
     it("should return an error if no wave has been set", () => {
         (0, chai_1.expect)((0, parser_1.parseSmartCard)(out, 1, "J_NUM 300 25 9", plant_types_1.PlantType.jalapeno))
@@ -718,7 +718,7 @@ describe("parseScene", () => {
     });
     it("should return an error scene is unknown", () => {
         (0, chai_1.expect)((0, parser_1.parseScene)(out, [{ lineNum: 1, line: "scene:AQE" }]))
-            .to.deep.equal((0, error_1.error)(1, "未知场地", "AQE"));
+            .to.deep.equal((0, error_1.error)(1, "未知场地", "AQE (支持的场地: DE, NE, PE, FE, RE, ME)"));
     });
     it("should parse scene", () => {
         (0, chai_1.expect)((0, parser_1.parseScene)(out, [{ lineNum: 1, line: "scene:FE" }])).equal(null);
@@ -837,7 +837,7 @@ describe("parseZombieTypeArg", () => {
     });
     it("should return an error if zombieTypeAbbr is completely unmatched", () => {
         (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:xxxx", undefined)).to.deep.equal((0, error_1.error)(1, "未知僵尸类型", "xxxx"));
-        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:僵", undefined)).to.deep.equal((0, error_1.error)(1, "未知僵尸类型", "僵 (可用的僵尸类型: 障,杆,桶,报,门,橄,舞,潜,车,豚,丑,气,矿,跳,偷,梯,篮,白,红)"));
+        (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:僵", undefined)).to.deep.equal((0, error_1.error)(1, "未知僵尸类型", "僵 (支持的僵尸类型: 障,杆,桶,报,门,橄,舞,潜,车,豚,丑,气,矿,跳,偷,梯,篮,白,红)"));
     });
     it("should return an error if zombieTypeAbbr is unknown and also suggest closest name", () => {
         (0, chai_1.expect)((0, parser_1.parseZombieTypeArg)(args, "require", "-req", 1, "require:football", undefined)).to.deep.equal((0, error_1.error)(1, "未知僵尸类型", "football (您是否要输入 foot?)"));
@@ -887,18 +887,17 @@ describe("parseBoolArg", () => {
 });
 describe("parse", () => {
     it("should return empty object if input is empty", () => {
-        console.log((0, parser_1.parse)(""));
         (0, chai_1.expect)((0, parser_1.parse)(""))
             .to.have.property("out").that.deep.equal({
             setting: { scene: "FE" },
             waves: [],
         });
     });
-    it("should return an erorr if cob is used before wave", () => {
+    it("should return an error if cob is used before wave", () => {
         (0, chai_1.expect)((0, parser_1.parse)("P 300 2 9\nw1 601"))
             .to.deep.equal((0, error_1.error)(1, "请先设定波次", "P 300 2 9"));
     });
-    it("should return an erorr if cannot expand lines", () => {
+    it("should return an error if cannot expand lines", () => {
         (0, chai_1.expect)((0, parser_1.parse)("w1~0 601"))
             .to.deep.equal((0, error_1.error)(1, "起始波数应大于终止波数", "w1~0"));
     });
@@ -908,7 +907,7 @@ describe("parse", () => {
     });
     it("should return an error if scene is unknown", () => {
         (0, chai_1.expect)((0, parser_1.parse)("protect:68\nscene:AQE"))
-            .to.deep.equal((0, error_1.error)(2, "未知场地", "AQE"));
+            .to.deep.equal((0, error_1.error)(2, "未知场地", "AQE (支持的场地: DE, NE, PE, FE, RE, ME)"));
     });
     it("should parse a single wave with a cob and a fixed fodder", () => {
         (0, chai_1.expect)((0, parser_1.parse)("\nw1 601\nP 300 2 9\nC +134+134 5 9\n"))
@@ -1235,7 +1234,7 @@ describe("parse", () => {
             type: "Error",
             lineNum: 2,
             msg: "未知符号",
-            src: "X",
+            src: "X (使用帮助: https://marketplace.visualstudio.com/items?itemName=Crescendo.seml)",
         });
     });
     it("should deprecate assume_activate", () => {

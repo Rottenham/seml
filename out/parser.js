@@ -100,7 +100,7 @@ function parseTime(lineNum, timeToken, prevTime) {
     }
     else {
         if (prevTime === undefined) {
-            return (0, error_1.error)(lineNum, "没有延迟基准", timeToken);
+            return (0, error_1.error)(lineNum, "没有延迟基准, 请先使用非延迟语句", timeToken);
         }
         ;
         return prevTime + time;
@@ -140,7 +140,7 @@ function parseCob(out, lineNum, line, cobNum) {
         return (0, error_1.error)(lineNum, "请提供炮生效时机, 落点行, 落点列", line);
     }
     if (tl.length > 0) {
-        return (0, error_1.error)(lineNum, "多余的参数", tl);
+        return (0, error_1.error)(lineNum, "请删去多余的参数", tl);
     }
     let cobCol;
     if (/\d$/.test(symbol)) {
@@ -304,7 +304,7 @@ function parseFodder(out, lineNum, line) {
                 fodderArgs[key] = waves;
             }
             else {
-                return (0, error_1.error)(lineNum, "未知参数", key);
+                return (0, error_1.error)(lineNum, "未知参数", `${key} (支持的参数: choose, waves)`);
             }
         }
         if (mustProvideChoose && fodderArgs.choose === undefined) {
@@ -376,7 +376,7 @@ function parseFixedCard(out, lineNum, line, plantType) {
         return (0, error_1.error)(lineNum, "请提供用卡时机, 用卡行, 用卡列", line);
     }
     if (tl.length > 0) {
-        return (0, error_1.error)(lineNum, "多余的参数", tl);
+        return (0, error_1.error)(lineNum, "请删去多余的参数", tl);
     }
     let time;
     let shovelTime = undefined;
@@ -443,7 +443,7 @@ function parseSmartCard(out, lineNum, line, plantType) {
         return (0, error_1.error)(lineNum, "请提供用卡时机, 用卡行, 用卡列", line);
     }
     if (tl.length > 0) {
-        return (0, error_1.error)(lineNum, "多余的参数", tl);
+        return (0, error_1.error)(lineNum, "请删去多余的参数", tl);
     }
     const time = parseTime(lineNum, timeToken, currWave.actions.slice(-1)[0]?.time);
     if ((0, error_1.isError)(time)) {
@@ -514,7 +514,7 @@ function parseScene(out, lines) {
                 out.setting.scene = "ME";
             }
             else {
-                return (0, error_1.error)(lineNum, "未知场地", scene);
+                return (0, error_1.error)(lineNum, "未知场地", `${scene} (支持的场地: DE, NE, PE, FE, RE, ME)`);
             }
         }
     }
@@ -592,7 +592,7 @@ function parseZombieTypeArg(args, argName, argFlag, lineNum, line, prevTypesStr)
         if (containChinese) {
             const parsedZombieType = zombie_types_1.zombieTypeCNAbbrToEnum[lowerCasedZombieTypeAbbr];
             if (parsedZombieType === undefined) {
-                return (0, error_1.error)(lineNum, `未知僵尸类型`, `${zombieTypeAbbr} (可用的僵尸类型: ${Object.keys(zombie_types_1.zombieTypeCNAbbrToEnum)})`);
+                return (0, error_1.error)(lineNum, `未知僵尸类型`, `${zombieTypeAbbr} (支持的僵尸类型: ${Object.keys(zombie_types_1.zombieTypeCNAbbrToEnum)})`);
             }
             zombieType = parsedZombieType;
         }
@@ -708,7 +708,7 @@ function parse(text) {
                 parseResult = parseSet(out, lineNum, line);
             }
             else {
-                parseResult = (0, error_1.error)(lineNum, "未知符号", symbol);
+                parseResult = (0, error_1.error)(lineNum, "未知符号", `${symbol} (使用帮助: https://marketplace.visualstudio.com/items?itemName=Crescendo.seml)`);
             }
             if ((0, error_1.isError)(parseResult)) {
                 return parseResult;

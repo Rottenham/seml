@@ -32,11 +32,11 @@ describe("parseCob", () => {
     it("should return an error if delay is used without context", () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
         expect(parseCob(out, 1, "P +220 2 9", 1)).to.deep.equal(
-            error(1, "没有延迟基准", "+220")
+            error(1, "没有延迟基准, 请先使用非延迟语句", "+220")
         );
     });
 
-    it("should return an error if number of rows dooes not match expected number of cobs", () => {
+    it("should return an error if number of rows does not match expected number of cobs", () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
         expect(parseCob(out, 1, "PP 300 2 9", 2)).to.deep.equal(
             error(1, "请提供 2 个落点行", "2")
@@ -53,7 +53,7 @@ describe("parseCob", () => {
     it("should return an error if there is excessive argument", () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
         expect(parseCob(out, 1, "P 300 2 9 9", 1)).to.deep.equal(
-            error(1, "多余的参数", "9")
+            error(1, "请删去多余的参数", "9")
         );
     });
 
@@ -286,7 +286,7 @@ describe("parseFodder", () => {
     it("should return an error if delay is used without context", () => {
         out.waves[0] = { iceTimes: [], waveLength: 0, actions: [] };
         expect(parseFodder(out, 1, "C +134 2 9"))
-            .to.deep.equal(error(1, "没有延迟基准", "+134"));
+            .to.deep.equal(error(1, "没有延迟基准, 请先使用非延迟语句", "+134"));
     });
 
     it("should return an error if shovel time is negative", () => {
@@ -510,7 +510,7 @@ describe('parseFodderWithArgs', () => {
     it("should return an error if parameter key is unknown", () => {
         out.waves[0] = { iceTimes: [], waveLength: 0, actions: [] };
         expect(parseFodder(out, 1, "C_POS 300 25 9 wave:1"))
-            .to.deep.equal(error(1, "未知参数", "wave"));
+            .to.deep.equal(error(1, "未知参数", "wave (支持的参数: choose, waves)"));
     });
 
     it("should return an error if parameter key is duplicated", () => {
@@ -604,7 +604,7 @@ describe('parseFixedCard', () => {
     it('should return an error if there is excessive argument', () => {
         out.waves[0] = { waveLength: 601, iceTimes: [], actions: [] };
         expect(parseFixedCard(out, 1, 'J 100 1 9 9', PlantType.jalapeno)).to.deep.equal(
-            error(1, '多余的参数', '9')
+            error(1, '请删去多余的参数', '9')
         );
     });
 
@@ -721,7 +721,7 @@ describe("parseSmartCard", () => {
     it("should return an error if there is excessive argument", () => {
         out.waves[0] = { iceTimes: [], waveLength: 0, actions: [] };
         expect(parseSmartCard(out, 1, "J_NUM 300 25 9 9", PlantType.jalapeno))
-            .to.deep.equal(error(1, "多余的参数", "9"));
+            .to.deep.equal(error(1, "请删去多余的参数", "9"));
     });
 
 
@@ -873,7 +873,7 @@ describe("parseScene", () => {
 
     it("should return an error scene is unknown", () => {
         expect(parseScene(out, [{ lineNum: 1, line: "scene:AQE" }]))
-            .to.deep.equal(error(1, "未知场地", "AQE"));
+            .to.deep.equal(error(1, "未知场地", "AQE (支持的场地: DE, NE, PE, FE, RE, ME)"));
     });
 
     it("should parse scene", () => {
@@ -1021,7 +1021,7 @@ describe("parseZombieTypeArg", () => {
             error(1, "未知僵尸类型", "xxxx")
         );
         expect(parseZombieTypeArg(args, "require", "-req", 1, "require:僵", undefined)).to.deep.equal(
-            error(1, "未知僵尸类型", "僵 (可用的僵尸类型: 障,杆,桶,报,门,橄,舞,潜,车,豚,丑,气,矿,跳,偷,梯,篮,白,红)")
+            error(1, "未知僵尸类型", "僵 (支持的僵尸类型: 障,杆,桶,报,门,橄,舞,潜,车,豚,丑,气,矿,跳,偷,梯,篮,白,红)")
         );
     });
 
@@ -1091,7 +1091,6 @@ describe("parseBoolArg", () => {
 
 describe("parse", () => {
     it("should return empty object if input is empty", () => {
-        console.log(parse(""));
         expect(parse(""))
             .to.have.property("out").that.deep.equal({
                 setting: { scene: "FE" },
@@ -1099,12 +1098,12 @@ describe("parse", () => {
             });
     });
 
-    it("should return an erorr if cob is used before wave", () => {
+    it("should return an error if cob is used before wave", () => {
         expect(parse("P 300 2 9\nw1 601"))
             .to.deep.equal(error(1, "请先设定波次", "P 300 2 9"));
     });
 
-    it("should return an erorr if cannot expand lines", () => {
+    it("should return an error if cannot expand lines", () => {
         expect(parse("w1~0 601"))
             .to.deep.equal(error(1, "起始波数应大于终止波数", "w1~0"));
     });
@@ -1116,7 +1115,7 @@ describe("parse", () => {
 
     it("should return an error if scene is unknown", () => {
         expect(parse("protect:68\nscene:AQE"))
-            .to.deep.equal(error(2, "未知场地", "AQE"));
+            .to.deep.equal(error(2, "未知场地", "AQE (支持的场地: DE, NE, PE, FE, RE, ME)"));
     });
 
     it("should parse a single wave with a cob and a fixed fodder", () => {
@@ -1449,7 +1448,7 @@ describe("parse", () => {
             type: "Error",
             lineNum: 2,
             msg: "未知符号",
-            src: "X",
+            src: "X (使用帮助: https://marketplace.visualstudio.com/items?itemName=Crescendo.seml)",
         });
     });
 

@@ -7,7 +7,7 @@
         },
         {
             "name": "",
-            "match": "^(SET|G|A|J|a|A_NUM|J_NUM|a_NUM|C|C_POS|C_NUM|P[1-8]?|B[1-8]?|D[1-8]?|PP[1-8]?|DD[1-8]?|p[1-8]?|b[1-8]?|d[1-8]?|pp[1-8]?|dd[1-8]?|bb[1-8]?)\\s+(\\+?\\d+)?",
+            "match": "^(SET|G|A|J|a|A_NUM|J_NUM|a_NUM|C|C_POS|C_NUM|P[1-8]?|B[1-8]?|D[1-8]?|PP[1-8]?|DD[1-8]?|BB[1-8]?|p[1-8]?|b[1-8]?|d[1-8]?|pp[1-8]?|dd[1-8]?|bb[1-8]?)\\s+(\\+?\\d+)?",
             "captures": {
                 "1": {
                     "name": "entity.other.attribute-name.seml"
