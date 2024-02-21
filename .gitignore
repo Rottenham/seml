@@ -10,3 +10,4 @@ coverage
 
 # Batch file to update binaries for testing
 copy_binaries.bat
+compile_binaries.bat
