@@ -205,7 +205,7 @@ scene:PE                # 场地, 六场地大小写皆可
 require:红白             # 必出的僵尸类型, 可用中文单字或英文四字缩写
 ban:foot zomb           # 禁出的僵尸类型
 huge:false              # true 为旗帜波, false 为普通波
-activate:true    # true 为激活, false 为分离
+activate:true           # true 为激活, false 为分离
 dance:true              # true 为使用 dance cheat (测激活用 fast, 测分离用 slow), false 为不使用 
 repeat:1000             # 测试选卡数 (默认 1000)
 ```
