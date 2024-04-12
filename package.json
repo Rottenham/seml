@@ -49,12 +49,28 @@
         "title": "Seml: 测试炮伤 (test explode)"
       },
       {
+        "command": "seml.testRefresh",
+        "title": "Seml: 测试刷新 (test refresh)"
+      },
+      {
         "command": "seml.testPogo",
         "title": "Seml: 测试跳跳 (test pogo)"
       },
       {
-        "command": "seml.testRefresh",
-        "title": "Seml: 测试刷新 (test refresh)"
+        "command": "seml.useSmashTemplate",
+        "title": "Seml: 使用砸率模板 (use smash template)"
+      },
+      {
+        "command": "seml.useExplodeTemplate",
+        "title": "Seml: 使用炮伤模板 (use explode template)"
+      },
+      {
+        "command": "seml.useRefreshTemplate",
+        "title": "Seml: 使用刷新模板 (use refresh template)"
+      },
+      {
+        "command": "seml.usePogoTemplate",
+        "title": "Seml: 使用跳跳模板 (use pogo template)"
       }
     ]
   },

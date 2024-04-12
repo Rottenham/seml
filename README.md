@@ -60,6 +60,7 @@ require:红白            # 必出的僵尸类型, 可用中文单字或英文�
 huge:false             # true 为旗帜波, false 为普通波
 activate:true          # true 为激活, false 为分离
 dance:true             # true 为使用 dance cheat, false 为不使用
+natural:true           # true 为自然出怪, false 为均匀出怪
 repeat:1000            # 测试选卡数 (可省略, 默认 1000)
 
 w 601

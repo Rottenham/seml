@@ -5,6 +5,9 @@ const error_1 = require("./error");
 const string_1 = require("./string");
 const plant_types_1 = require("./plant_types");
 const zombie_types_1 = require("./zombie_types");
+function isScene(value) {
+    return ["DE", "NE", "PE", "FE", "RE", "ME"].includes(value);
+}
 function getMaxRows(scene) {
     if (scene === undefined || scene === "FE") {
         return 6;
@@ -504,14 +507,17 @@ function parseScene(out, lines) {
             }
             const scene = line.split(":").slice(1).join(":");
             const upperCasedScene = scene.toUpperCase();
-            if (["DE", "NE"].includes(upperCasedScene)) {
-                out.setting.scene = "NE";
-            }
-            else if (["PE", "FE"].includes(upperCasedScene)) {
-                out.setting.scene = "FE";
-            }
-            else if (["RE", "ME"].includes(upperCasedScene)) {
-                out.setting.scene = "ME";
+            if (isScene(upperCasedScene)) {
+                out.setting.originalScene = upperCasedScene;
+                if (["DE", "NE"].includes(upperCasedScene)) {
+                    out.setting.scene = "NE";
+                }
+                else if (["PE", "FE"].includes(upperCasedScene)) {
+                    out.setting.scene = "FE";
+                }
+                else if (["RE", "ME"].includes(upperCasedScene)) {
+                    out.setting.scene = "ME";
+                }
             }
             else {
                 return (0, error_1.error)(lineNum, "未知场地", `${scene} (支持的场地: DE, NE, PE, FE, RE, ME)`);
@@ -578,7 +584,7 @@ function parseIntArg(args, argName, argFlag, lineNum, line) {
     return null;
 }
 exports.parseIntArg = parseIntArg;
-function parseZombieTypeArg(args, argName, argFlag, lineNum, line, prevTypesStr) {
+function parseZombieTypeArg(args, argName, argFlag, scene, lineNum, line, prevTypesStr) {
     if (argName in args) {
         return (0, error_1.error)(lineNum, "参数重复", argName);
     }
@@ -610,6 +616,9 @@ function parseZombieTypeArg(args, argName, argFlag, lineNum, line, prevTypesStr)
         }
         if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
             return (0, error_1.error)(lineNum, "僵尸类型重复", zombieTypeAbbr);
+        }
+        if (zombie_types_1.bannedZombieTypes[scene].includes(zombieType)) {
+            return (0, error_1.error)(lineNum, `${scene}场地无法指定此僵尸类型`, zombieTypeAbbr);
         }
         zombieTypes.push(zombieType);
     }
@@ -654,10 +663,10 @@ function parse(text) {
                 parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
             }
             else if (symbol.startsWith("require:")) {
-                parseResult = parseZombieTypeArg(args, "require", "-req", lineNum, line, args["ban"]?.[1]);
+                parseResult = parseZombieTypeArg(args, "require", "-req", out.setting.originalScene, lineNum, line, args["ban"]?.[1]);
             }
             else if (symbol.startsWith("ban:")) {
-                parseResult = parseZombieTypeArg(args, "ban", "-ban", lineNum, line, args["require"]?.[1]);
+                parseResult = parseZombieTypeArg(args, "ban", "-ban", out.setting.originalScene, lineNum, line, args["require"]?.[1]);
             }
             else if (symbol.startsWith("huge:")) {
                 parseResult = parseBoolArg(args, "huge", "-h", lineNum, line);
@@ -670,6 +679,9 @@ function parse(text) {
             }
             else if (symbol.startsWith("dance:")) {
                 parseResult = parseBoolArg(args, "dance", "-d", lineNum, line);
+            }
+            else if (symbol.startsWith("natural:")) {
+                parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
             }
             else if (symbol.startsWith("w")) {
                 parseResult = parseWave(out, lineNum, line);

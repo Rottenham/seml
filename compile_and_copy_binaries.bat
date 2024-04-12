@@ -1,0 +1,1 @@
+make -C ..\\GitHub\\PvZ-Emulator-examples && .\copy_binaries.bat

@@ -4,7 +4,9 @@ import * as path from 'path';
 
 import { isError } from './error';
 import { parse } from './parser';
-import { execFile, ExecFileException } from 'child_process';
+import { exec, execFile, ExecFileException } from 'child_process';
+import { templates } from './templates';
+
 
 function runBinary(filename: string, args: string[], jsonFilePath: string) {
 	const binaryPath = path.join(__dirname, "bin", filename);
@@ -26,7 +28,21 @@ function runBinary(filename: string, args: string[], jsonFilePath: string) {
 			}
 		});
 
-		vscode.window.showInformationMessage(`${stdout}`);
+		vscode.window.showInformationMessage(`${stdout}`, "打开文件").then(selection => {
+			if (selection === "打开文件") {
+				const regex = /输出文件已保存至 (.+).\s+?耗时/;
+				const match = stdout.match(regex);
+				if (match !== null) {
+					exec(`start "" "${match[1]}"`, (error) => {
+						if (error) {
+							vscode.window.showErrorMessage(`无法打开文件: ${error.message}`);
+						}
+					});
+				} else {
+					vscode.window.showErrorMessage(`无法识别文件名`);
+				}
+			}
+		});
 	});
 }
 
@@ -64,6 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('seml.compileToJson', () => {
 		const editor = vscode.window.activeTextEditor;
 		if (editor === undefined) {
+			vscode.window.showErrorMessage(`请先打开文件`);
 			return;
 		}
 
@@ -85,135 +102,68 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('seml.testSmash', () => {
-		const editor = vscode.window.activeTextEditor;
-		if (editor === undefined) {
-			return;
-		}
-
-		const compiledJson = compileToJson(editor.document);
-		if (compiledJson === undefined) {
-			return;
-		}
-
-		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
-
-		const destDirName = path.join(dirName, "dest");
-		if (!fs.existsSync(destDirName)) {
-			fs.mkdirSync(destDirName);
-		}
-
-		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
-			if (err) {
-				vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
+	for (const testName of ["Smash", "Explode", "Refresh", "Pogo"]) {
+		context.subscriptions.push(vscode.commands.registerCommand(`seml.test${testName}`, () => {
+			const editor = vscode.window.activeTextEditor;
+			if (editor === undefined) {
+				vscode.window.showErrorMessage(`请先打开文件`);
 				return;
 			}
 
-			runBinary('smash_test.exe',
-				[...Object.values(args).flatMap(x => x),
-					"-f", jsonFilePath,
-					"-o", path.join(destDirName, baseName + "_smash")],
-				jsonFilePath);
-		});
-	}));
-
-	context.subscriptions.push(vscode.commands.registerCommand('seml.testExplode', () => {
-		const editor = vscode.window.activeTextEditor;
-		if (editor === undefined) {
-			return;
-		}
-
-		const compiledJson = compileToJson(editor.document);
-		if (compiledJson === undefined) {
-			return;
-		}
-
-		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
-
-		const destDirName = path.join(dirName, "dest");
-		if (!fs.existsSync(destDirName)) {
-			fs.mkdirSync(destDirName);
-		}
-
-		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
-			if (err) {
-				vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
+			const compiledJson = compileToJson(editor.document);
+			if (compiledJson === undefined) {
 				return;
 			}
 
-			runBinary('explode_test.exe',
-				[...Object.values(args).flatMap(x => x),
-					"-f", jsonFilePath,
-					"-o", path.join(destDirName, baseName + "_explode")],
-				jsonFilePath);
-		});
-	}));
+			const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
 
-	context.subscriptions.push(vscode.commands.registerCommand('seml.testPogo', () => {
-		const editor = vscode.window.activeTextEditor;
-		if (editor === undefined) {
-			return;
-		}
-
-		const compiledJson = compileToJson(editor.document);
-		if (compiledJson === undefined) {
-			return;
-		}
-
-		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
-
-		const destDirName = path.join(dirName, "dest");
-		if (!fs.existsSync(destDirName)) {
-			fs.mkdirSync(destDirName);
-		}
-
-		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
-			if (err) {
-				vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
-				return;
+			const destDirName = path.join(dirName, "dest");
+			if (!fs.existsSync(destDirName)) {
+				fs.mkdirSync(destDirName);
 			}
 
-			runBinary('pogo_test.exe',
-				[...Object.values(args).flatMap(x => x),
-					"-f", jsonFilePath,
-					"-o", path.join(destDirName, baseName + "_pogo")],
-				jsonFilePath);
-		});
-	}));
+			fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
+				if (err) {
+					vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
+					return;
+				}
 
-	context.subscriptions.push(vscode.commands.registerCommand('seml.testRefresh', () => {
-		const editor = vscode.window.activeTextEditor;
-		if (editor === undefined) {
-			return;
-		}
+				runBinary(`${testName.toLowerCase()}_test.exe`,
+					[...Object.values(args).flatMap(x => x),
+						"-f", jsonFilePath,
+						"-o", path.join(destDirName, baseName + `_${testName.toLowerCase()}`)],
+					jsonFilePath);
+			});
+		}));
 
-		const compiledJson = compileToJson(editor.document);
-		if (compiledJson === undefined) {
-			return;
-		}
-
-		const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
-
-		const destDirName = path.join(dirName, "dest");
-		if (!fs.existsSync(destDirName)) {
-			fs.mkdirSync(destDirName);
-		}
-
-		fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
-			if (err) {
-				vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
+		context.subscriptions.push(vscode.commands.registerCommand(`seml.use${testName}Template`, () => {
+			const editor = vscode.window.activeTextEditor;
+			if (editor === undefined) {
+				vscode.window.showErrorMessage(`请先打开文件`);
 				return;
 			}
-
-			runBinary('refresh_test.exe',
-				[...Object.values(args).flatMap(x => x),
-					"-f", jsonFilePath,
-					"-o", path.join(destDirName, baseName + "_refresh")],
-				jsonFilePath);
-		});
-	}));
-
-
+			const doc = editor.document;
+			if (path.extname(doc.uri.fsPath) !== ".seml") {
+				vscode.window.showErrorMessage("请打开 .seml 文件");
+				return;
+			}
+			const fullRange = new vscode.Range(
+				doc.positionAt(0),
+				doc.positionAt(doc.getText().length)
+			);
+			editor.edit(editBuilder => {
+				editBuilder.replace(fullRange, templates[testName]!);
+			});
+			if (!context.globalState.get('noTemplateCtrlZMessage')) {
+				vscode.window.showInformationMessage("已使用模板. 可用 Ctrl+Z 撤销此操作.", "不再显示")
+					.then(selection => {
+						if (selection === "不再显示") {
+							context.globalState.update('noTemplateCtrlZMessage', true);
+						}
+					});
+			}
+		}));
+	}
 }
 
 export function deactivate() { }

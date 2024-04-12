@@ -1,7 +1,7 @@
 import { Error, error, isError } from "./error";
 import { chopPrefix, chopSuffix, parseNatural, parseDecimal, findClosestString } from "./string";
 import { PlantType } from "./plant_types";
-import { zombieTypeCNAbbrToEnum, zombieTypeENAbbrToEnum } from "./zombie_types";
+import { bannedZombieTypes, zombieTypeCNAbbrToEnum, zombieTypeENAbbrToEnum } from "./zombie_types";
 
 type Position = {
 	readonly row: number;
@@ -68,9 +68,16 @@ type ProtectPos = {
 	readonly type: "Cob" | "Normal"
 } & Position;
 
+type Scene = "DE" | "NE" | "PE" | "FE" | "RE" | "ME";
+
+function isScene(value: string): value is Scene {
+	return ["DE", "NE", "PE", "FE", "RE", "ME"].includes(value);
+}
+
 export type ParserOutput = {
 	setting: {
 		protect?: ProtectPos[],
+		originalScene?: Scene,
 		scene?: "NE" | "FE" | "ME",
 		variables?: { [key: string]: number },
 	},
@@ -655,13 +662,17 @@ export function parseScene(out: ParserOutput, lines: Line[]): null | Error {
 			const scene = line.split(":").slice(1).join(":");
 			const upperCasedScene = scene.toUpperCase();
 
-			if (["DE", "NE"].includes(upperCasedScene)) {
-				out.setting.scene = "NE";
-			} else if (["PE", "FE"].includes(upperCasedScene)) {
-				out.setting.scene = "FE";
-			} else if (["RE", "ME"].includes(upperCasedScene)) {
-				out.setting.scene = "ME";
-			} else {
+			if (isScene(upperCasedScene)) {
+				out.setting.originalScene = upperCasedScene;
+				if (["DE", "NE"].includes(upperCasedScene)) {
+					out.setting.scene = "NE";
+				} else if (["PE", "FE"].includes(upperCasedScene)) {
+					out.setting.scene = "FE";
+				} else if (["RE", "ME"].includes(upperCasedScene)) {
+					out.setting.scene = "ME";
+				}
+			}
+			else {
 				return error(lineNum, "未知场地", `${scene} (支持的场地: DE, NE, PE, FE, RE, ME)`);
 			}
 		}
@@ -738,7 +749,7 @@ export function parseIntArg(args: { [key: string]: string[] }, argName: string, 
 }
 
 export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: string, argFlag: string,
-	lineNum: number, line: string, prevTypesStr: string | undefined): null | Error {
+	scene: Scene, lineNum: number, line: string, prevTypesStr: string | undefined): null | Error {
 	if (argName in args) {
 		return error(lineNum, "参数重复", argName);
 	}
@@ -775,6 +786,9 @@ export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: s
 
 		if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
 			return error(lineNum, "僵尸类型重复", zombieTypeAbbr);
+		}
+		if (bannedZombieTypes[scene]!.includes(zombieType)) {
+			return error(lineNum, `${scene}场地无法指定此僵尸类型`, zombieTypeAbbr);
 		}
 		zombieTypes.push(zombieType);
 	}
@@ -825,9 +839,9 @@ export function parse(text: string) {
 			} else if (symbol.startsWith("repeat:")) {
 				parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
 			} else if (symbol.startsWith("require:")) {
-				parseResult = parseZombieTypeArg(args, "require", "-req", lineNum, line, args["ban"]?.[1]);
+				parseResult = parseZombieTypeArg(args, "require", "-req", out.setting.originalScene!, lineNum, line, args["ban"]?.[1]);
 			} else if (symbol.startsWith("ban:")) {
-				parseResult = parseZombieTypeArg(args, "ban", "-ban", lineNum, line, args["require"]?.[1]);
+				parseResult = parseZombieTypeArg(args, "ban", "-ban", out.setting.originalScene!, lineNum, line, args["require"]?.[1]);
 			} else if (symbol.startsWith("huge:")) {
 				parseResult = parseBoolArg(args, "huge", "-h", lineNum, line);
 			} else if (symbol.startsWith("activate:")) {
@@ -836,6 +850,8 @@ export function parse(text: string) {
 				parseResult = error(lineNum, "自 Seml 1.5.5 起, assume_activate 已更名为 activate", line);
 			} else if (symbol.startsWith("dance:")) {
 				parseResult = parseBoolArg(args, "dance", "-d", lineNum, line);
+			} else if (symbol.startsWith("natural:")) {
+				parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
 			} else if (symbol.startsWith("w")) {
 				parseResult = parseWave(out, lineNum, line);
 			} else if (/^(B|P|D)\d?$/.test(symbol.toUpperCase())) {

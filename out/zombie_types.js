@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.zombieTypeENAbbrToEnum = exports.zombieTypeCNAbbrToEnum = exports.ZombieType = void 0;
+exports.bannedZombieTypes = exports.zombieTypeENAbbrToEnum = exports.zombieTypeCNAbbrToEnum = exports.ZombieType = void 0;
 // These names are taken from PvZ Emulator.
 var ZombieType;
 (function (ZombieType) {
@@ -32,17 +32,11 @@ var ZombieType;
 })(ZombieType || (exports.ZombieType = ZombieType = {}));
 ;
 exports.zombieTypeCNAbbrToEnum = {
-    // "普": ZombieType.zombie,
-    // "旗": ZombieType.flag,
-    "障": ZombieType.conehead,
     "杆": ZombieType.poleVaulting,
     "桶": ZombieType.buckethead,
-    "报": ZombieType.newspaper,
     "门": ZombieType.screendoor,
     "橄": ZombieType.football,
     "舞": ZombieType.dancing,
-    // "伴": ZombieType.backupDancer,
-    // "鸭": ZombieType.duckyTube,
     "潜": ZombieType.snorkel,
     "车": ZombieType.zomboni,
     "豚": ZombieType.dolphinRider,
@@ -50,26 +44,18 @@ exports.zombieTypeCNAbbrToEnum = {
     "气": ZombieType.balloon,
     "矿": ZombieType.digger,
     "跳": ZombieType.pogo,
-    // "雪": ZombieType.yeti,
     "偷": ZombieType.bungee,
     "梯": ZombieType.ladder,
     "篮": ZombieType.catapult,
     "白": ZombieType.gargantuar,
-    // "鬼": ZombieType.imp,
     "红": ZombieType.gigaGargantuar,
 };
 exports.zombieTypeENAbbrToEnum = {
-    // "norm": ZombieType.zombie,
-    // "flag": ZombieType.flag,
-    "cone": ZombieType.conehead,
     "pole": ZombieType.poleVaulting,
     "buck": ZombieType.buckethead,
-    "news": ZombieType.newspaper,
     "scre": ZombieType.screendoor,
     "foot": ZombieType.football,
     "danc": ZombieType.dancing,
-    // "back": ZombieType.backupDancer,
-    // "duck": ZombieType.duckyTube,
     "snor": ZombieType.snorkel,
     "zomb": ZombieType.zomboni,
     "dolp": ZombieType.dolphinRider,
@@ -77,12 +63,21 @@ exports.zombieTypeENAbbrToEnum = {
     "ball": ZombieType.balloon,
     "digg": ZombieType.digger,
     "pogo": ZombieType.pogo,
-    // "yeti": ZombieType.yeti,
     "bung": ZombieType.bungee,
     "ladd": ZombieType.ladder,
     "cata": ZombieType.catapult,
     "garg": ZombieType.gargantuar,
-    // "imp": ZombieType.imp,
     "giga": ZombieType.gigaGargantuar,
+};
+/* eslint-disable @typescript-eslint/naming-convention */
+exports.bannedZombieTypes = {
+    "DE": [ZombieType.snorkel, ZombieType.dolphinRider],
+    "NE": [ZombieType.snorkel, ZombieType.zomboni, ZombieType.dolphinRider],
+    "PE": [],
+    "FE": [],
+    "RE": [ZombieType.dancing, ZombieType.snorkel, ZombieType.dolphinRider,
+        ZombieType.digger],
+    "ME": [ZombieType.dancing, ZombieType.snorkel, ZombieType.dolphinRider,
+        ZombieType.digger]
 };
 //# sourceMappingURL=zombie_types.js.map
