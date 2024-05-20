@@ -1,7 +1,7 @@
 import { Error, error, isError } from "./error";
 import { chopPrefix, chopSuffix, parseNatural, parseDecimal, findClosestString } from "./string";
 import { PlantType } from "./plant_types";
-import { bannedZombieTypes, zombieTypeCNAbbrToEnum, zombieTypeENAbbrToEnum } from "./zombie_types";
+import { bannedZombieTypes, acceptableZombieTypes, zombieTypeCNAbbrToEnum, zombieTypeENAbbrToEnum } from "./zombie_types";
 
 type Position = {
 	readonly row: number;
@@ -784,6 +784,9 @@ export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: s
 			zombieType = parsedZombieType;
 		}
 
+		if (!acceptableZombieTypes.includes(zombieType)) {
+			return error(lineNum, `$无法指定此僵尸类型`, zombieTypeAbbr);
+		}
 		if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
 			return error(lineNum, "僵尸类型重复", zombieTypeAbbr);
 		}

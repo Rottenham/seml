@@ -614,6 +614,9 @@ function parseZombieTypeArg(args, argName, argFlag, scene, lineNum, line, prevTy
             }
             zombieType = parsedZombieType;
         }
+        if (!zombie_types_1.acceptableZombieTypes.includes(zombieType)) {
+            return (0, error_1.error)(lineNum, `$无法指定此僵尸类型`, zombieTypeAbbr);
+        }
         if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
             return (0, error_1.error)(lineNum, "僵尸类型重复", zombieTypeAbbr);
         }
