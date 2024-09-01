@@ -849,8 +849,6 @@ export function parse(text: string) {
 				parseResult = parseBoolArg(args, "huge", "-h", lineNum, line);
 			} else if (symbol.startsWith("activate:")) {
 				parseResult = parseBoolArg(args, "activate", "-a", lineNum, line);
-			} else if (symbol.startsWith("assume_activate:")) { // for backward compatibility
-				parseResult = error(lineNum, "自 Seml 1.5.5 起, assume_activate 已更名为 activate", line);
 			} else if (symbol.startsWith("dance:")) {
 				parseResult = parseBoolArg(args, "dance", "-d", lineNum, line);
 			} else if (symbol.startsWith("natural:")) {

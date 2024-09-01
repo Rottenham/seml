@@ -6,7 +6,7 @@ exports.templates = {
     "Smash": `# 测试 PE.垫材24 旧PDc解的砸率
 scene:PE
 protect:18 28 58 68  # 要保护的炮位
-repeat:300           # 测试选卡数 (可省略, 默认300), 每个选卡总计 1000 只红眼
+repeat:10000         # 测试选卡数 (可省略, 默认 10000), 每波 5 只红眼
 
 w 601
 PP 225 25 9
